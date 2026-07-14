@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connect 4 — Hamdan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sand: #f1e3c2;
+    --sand-dark: #e3cf9c;
+    --card: #faf3e0;
+    --text: #3b2c1a;
+    --muted: #8a7048;
+    --gold: #b8860b;
+    --gold-light: #d4af37;
+    --green: #00732f;
+    --red: #c8102e;
+    --black: #14110d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Cairo", "Segoe UI", sans-serif;
+    background-color: var(--sand);
+    background-image:
+      radial-gradient(circle at 20% 20%, rgba(184,134,11,0.12) 0, transparent 45%),
+      radial-gradient(circle at 80% 80%, rgba(0,115,47,0.10) 0, transparent 45%),
+      repeating-linear-gradient(45deg, rgba(184,134,11,0.06) 0 2px, transparent 2px 26px),
+      repeating-linear-gradient(-45deg, rgba(184,134,11,0.06) 0 2px, transparent 2px 26px);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+  }
+  .card {
+    max-width: 480px;
+    width: 100%;
+    background: var(--card);
+    border-radius: 14px;
+    padding: 2.5rem 2rem 2rem;
+    box-shadow: 0 20px 60px rgba(20,17,13,0.25);
+    text-align: center;
+    border: 2px solid var(--gold);
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 8px;
+    background: linear-gradient(to right,
+      var(--red) 0 12%,
+      var(--green) 12% 41%, var(--card) 41% 42%,
+      #ffffff 42% 71%, var(--card) 71% 72%,
+      var(--black) 72% 100%);
+  }
+  a.back {
+    display: inline-block;
+    margin: 1rem 0 1.25rem;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+  a.back:hover { color: var(--green); }
+  h1 {
+    font-family: "Amiri", "Cairo", serif;
+    font-weight: 700;
+    font-size: 2.4rem;
+    letter-spacing: 0.03em;
+    margin-bottom: 0.15rem;
+    color: var(--gold);
+    text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+  }
+  .subtitle {
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+  }
+  .difficulty-row {
+    margin-bottom: 1.25rem;
+  }
+  .hint {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin: 0 0 1.25rem;
+  }
+  .status {
+    color: var(--muted);
+    font-size: 1rem;
+    margin-bottom: 1.25rem;
+    min-height: 1.4rem;
+  }
+  .c4-board {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    background: var(--green);
+    border-radius: 12px;
+    padding: 10px;
+    margin: 0 auto 1.5rem;
+    max-width: 420px;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.25);
+  }
+  .c4-cell {
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    background: var(--sand);
+    cursor: pointer;
+    transition: transform 0.1s ease;
+  }
+  .c4-col:hover .c4-cell {
+    filter: brightness(0.97);
+  }
+  .c4-cell.red { background: var(--red); }
+  .c4-cell.yellow { background: var(--gold-light); }
+  .c4-cell.win { box-shadow: 0 0 0 3px var(--black) inset, 0 0 14px rgba(20,17,13,0.6); }
+  .controls {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  button, select {
+    font-family: "Cairo", inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 0.55rem 1.1rem;
+    border: 1.5px solid var(--gold);
+    background: var(--card);
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  }
+  button:hover, select:hover {
+    border-color: var(--green);
+    color: var(--green);
+    background: var(--sand);
+  }
+  footer {
+    margin-top: 2rem;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+</style>
+</head>
+<body>
+  <main class="card">
+    <a class="back" href="./">&larr; Back to home</a>
+    <h1>Connect 4</h1>
+    <div class="subtitle">Emirati Heritage Edition</div>
+    <div class="difficulty-row">
+      <select id="difficulty">
+        <option value="unbeatable" selected>Unbeatable</option>
+        <option value="hard">Hard</option>
+        <option value="easy">Easy</option>
+      </select>
+    </div>
+    <p class="hint">Tap any cell in a column to drop your disc there.</p>
+    <div class="status" id="status">Your move — drop a red disc</div>
+    <div class="c4-board" id="board"></div>
+    <div class="controls">
+      <button id="reset">New Game</button>
+    </div>
+    <footer>You: Red &nbsp;·&nbsp; Computer: Gold</footer>
+  </main>
+
+<script>
+(function () {
+  const ROWS = 6, COLS = 7;
+  const HUMAN = 'red', AI = 'yellow';
+  const COL_ORDER = [3, 2, 4, 1, 5, 0, 6];
+
+  const boardEl = document.getElementById('board');
+  const statusEl = document.getElementById('status');
+  const resetBtn = document.getElementById('reset');
+  const difficultySel = document.getElementById('difficulty');
+
+  let board = [];
+  let gameOver = false;
+  let cellEls = [];
+
+  function makeEmptyBoard() {
+    return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+  }
+
+  function cloneBoard(b) {
+    return b.map(row => row.slice());
+  }
+
+  function validColumns(b) {
+    const cols = [];
+    for (let c = 0; c < COLS; c++) if (b[0][c] === null) cols.push(c);
+    return cols;
+  }
+
+  function dropRow(b, col) {
+    for (let r = ROWS - 1; r >= 0; r--) {
+      if (b[r][col] === null) return r;
+    }
+    return -1;
+  }
+
+  function applyDrop(b, col, mark) {
+    const nb = cloneBoard(b);
+    const r = dropRow(nb, col);
+    if (r === -1) return null;
+    nb[r][col] = mark;
+    return { board: nb, row: r, col };
+  }
+
+  function checkWinAt(b, row, col, mark) {
+    const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+    for (const [dr, dc] of dirs) {
+      const line = [[row, col]];
+      for (let s = 1; s < 4; s++) {
+        const r = row + dr * s, c = col + dc * s;
+        if (r < 0 || r >= ROWS || c < 0 || c >= COLS || b[r][c] !== mark) break;
+        line.push([r, c]);
+      }
+      for (let s = 1; s < 4; s++) {
+        const r = row - dr * s, c = col - dc * s;
+        if (r < 0 || r >= ROWS || c < 0 || c >= COLS || b[r][c] !== mark) break;
+        line.unshift([r, c]);
+      }
+      if (line.length >= 4) return line;
+    }
+    return null;
+  }
+
+  function isFull(b) {
+    return validColumns(b).length === 0;
+  }
+
+  function windowScore(counts, mark, other) {
+    const markCount = counts[mark], otherCount = counts[other], empty = counts.empty;
+    if (markCount === 4) return 100000;
+    if (markCount === 3 && empty === 1) return 8;
+    if (markCount === 2 && empty === 2) return 3;
+    if (otherCount === 3 && empty === 1) return -80;
+    return 0;
+  }
+
+  function evaluate(b) {
+    let score = 0;
+    const centerCol = Math.floor(COLS / 2);
+    for (let r = 0; r < ROWS; r++) {
+      if (b[r][centerCol] === AI) score += 3;
+      else if (b[r][centerCol] === HUMAN) score -= 3;
+    }
+
+    function countWindow(cells) {
+      const counts = { [AI]: 0, [HUMAN]: 0, empty: 0 };
+      for (const v of cells) {
+        if (v === null) counts.empty++;
+        else counts[v]++;
+      }
+      return counts;
+    }
+
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c <= COLS - 4; c++) {
+        const counts = countWindow([b[r][c], b[r][c+1], b[r][c+2], b[r][c+3]]);
+        score += windowScore(counts, AI, HUMAN);
+      }
+    }
+    for (let c = 0; c < COLS; c++) {
+      for (let r = 0; r <= ROWS - 4; r++) {
+        const counts = countWindow([b[r][c], b[r+1][c], b[r+2][c], b[r+3][c]]);
+        score += windowScore(counts, AI, HUMAN);
+      }
+    }
+    for (let r = 0; r <= ROWS - 4; r++) {
+      for (let c = 0; c <= COLS - 4; c++) {
+        const counts = countWindow([b[r][c], b[r+1][c+1], b[r+2][c+2], b[r+3][c+3]]);
+        score += windowScore(counts, AI, HUMAN);
+      }
+    }
+    for (let r = 3; r < ROWS; r++) {
+      for (let c = 0; c <= COLS - 4; c++) {
+        const counts = countWindow([b[r][c], b[r-1][c+1], b[r-2][c+2], b[r-3][c+3]]);
+        score += windowScore(counts, AI, HUMAN);
+      }
+    }
+    return score;
+  }
+
+  function minimax(b, depth, maxDepth, isMaximizing, alpha, beta) {
+    const cols = validColumns(b);
+    if (depth >= maxDepth || cols.length === 0) return evaluate(b);
+    const mark = isMaximizing ? AI : HUMAN;
+    if (isMaximizing) {
+      let best = -Infinity;
+      for (const c of COL_ORDER) {
+        if (!cols.includes(c)) continue;
+        const res = applyDrop(b, c, mark);
+        const win = checkWinAt(res.board, res.row, res.col, mark);
+        const score = win ? 100000 - depth : minimax(res.board, depth + 1, maxDepth, false, alpha, beta);
+        best = Math.max(best, score);
+        alpha = Math.max(alpha, score);
+        if (beta <= alpha) break;
+      }
+      return best;
+    }
+    let best = Infinity;
+    for (const c of COL_ORDER) {
+      if (!cols.includes(c)) continue;
+      const res = applyDrop(b, c, mark);
+      const win = checkWinAt(res.board, res.row, res.col, mark);
+      const score = win ? depth - 100000 : minimax(res.board, depth + 1, maxDepth, true, alpha, beta);
+      best = Math.min(best, score);
+      beta = Math.min(beta, score);
+      if (beta <= alpha) break;
+    }
+    return best;
+  }
+
+  function bestColumn(b, maxDepth) {
+    const cols = validColumns(b);
+    let best = { score: -Infinity, col: cols[0] };
+    for (const c of COL_ORDER) {
+      if (!cols.includes(c)) continue;
+      const res = applyDrop(b, c, AI);
+      const win = checkWinAt(res.board, res.row, res.col, AI);
+      const score = win ? 100000 : minimax(res.board, 1, maxDepth, false, -Infinity, Infinity);
+      if (score > best.score) best = { score, col: c };
+    }
+    return best.col;
+  }
+
+  function chooseAiColumn(b, difficulty) {
+    const cols = validColumns(b);
+    if (!cols.length) return null;
+    if (difficulty === 'easy') return cols[Math.floor(Math.random() * cols.length)];
+    if (difficulty === 'hard') {
+      return Math.random() < 0.7 ? bestColumn(b, 3) : cols[Math.floor(Math.random() * cols.length)];
+    }
+    return bestColumn(b, 6);
+  }
+
+  function render() {
+    boardEl.innerHTML = '';
+    cellEls = [];
+    for (let r = 0; r < ROWS; r++) {
+      cellEls.push([]);
+      for (let c = 0; c < COLS; c++) {
+        const cell = document.createElement('div');
+        const val = board[r][c];
+        cell.className = 'c4-cell' + (val ? ' ' + val : '');
+        cell.addEventListener('click', () => onColumnClick(c));
+        boardEl.appendChild(cell);
+        cellEls[r].push(cell);
+      }
+    }
+  }
+
+  function highlightWin(line) {
+    for (const [r, c] of line) cellEls[r][c].classList.add('win');
+  }
+
+  function onColumnClick(col) {
+    if (gameOver) return;
+    const res = applyDrop(board, col, HUMAN);
+    if (!res) return;
+    board = res.board;
+    render();
+    const win = checkWinAt(board, res.row, res.col, HUMAN);
+    if (win) return finish(HUMAN, win);
+    if (isFull(board)) return finish(null, []);
+    statusEl.textContent = "Computer's move...";
+    setTimeout(computerMove, 350);
+  }
+
+  function computerMove() {
+    if (gameOver) return;
+    const col = chooseAiColumn(board, difficultySel.value);
+    if (col === null || col === undefined) return;
+    const res = applyDrop(board, col, AI);
+    board = res.board;
+    render();
+    const win = checkWinAt(board, res.row, res.col, AI);
+    if (win) return finish(AI, win);
+    if (isFull(board)) return finish(null, []);
+    statusEl.textContent = "Your move — drop a red disc";
+  }
+
+  function finish(winnerMark, line) {
+    gameOver = true;
+    if (!winnerMark) {
+      statusEl.textContent = "It's a draw!";
+      return;
+    }
+    highlightWin(line);
+    statusEl.textContent = winnerMark === HUMAN ? 'You win! 🎉' : 'Computer wins!';
+  }
+
+  function newGame() {
+    board = makeEmptyBoard();
+    gameOver = false;
+    statusEl.textContent = "Your move — drop a red disc";
+    render();
+  }
+
+  resetBtn.addEventListener('click', newGame);
+  newGame();
+})();
+</script>
+</body>
+</html>
