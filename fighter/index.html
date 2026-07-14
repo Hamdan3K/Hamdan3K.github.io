@@ -219,8 +219,16 @@
 
     <canvas id="scene" width="640" height="320"></canvas>
 
-    <p class="hint"><kbd>Space</kbd> attack &nbsp; <kbd>D</kbd> defense bubble (heals you, 3s cooldown)</p>
+    <p class="hint">
+      <kbd>&larr;</kbd>/<kbd>A</kbd> back &nbsp; <kbd>&rarr;</kbd> forward &nbsp; <kbd>&uarr;</kbd>/<kbd>W</kbd> jump (dodge!) &nbsp;
+      <kbd>Space</kbd> attack &nbsp; <kbd>D</kbd> defense bubble (heals you, 3s cooldown)
+    </p>
 
+    <div class="action-row">
+      <button class="action-btn-game" id="leftBtn" style="background:#475569;">&larr;</button>
+      <button class="action-btn-game" id="jumpBtn" style="background:#475569;">Jump</button>
+      <button class="action-btn-game" id="rightBtn" style="background:#475569;">&rarr;</button>
+    </div>
     <div class="action-row">
       <button class="action-btn-game" id="attackBtn">Attack<div class="cooldown-overlay" id="attackCd" style="transform:scaleX(0)"></div></button>
       <button class="action-btn-game" id="defendBtn">Defend<div class="cooldown-overlay" id="defendCd" style="transform:scaleX(0)"></div></button>
@@ -280,6 +288,14 @@
   const SHIELD_DURATION = 1.5;
   const SHIELD_COOLDOWN = 3.0;
   const HEAL_RATE = 2;
+  const ATTACK_TELEGRAPH = 0.35;
+  const CPU_X = W - 150;
+  const HIT_RANGE = 120;
+  const MOVE_SPEED = 200;
+  const JUMP_VELOCITY = 300;
+  const GRAVITY = 900;
+  const PLAYER_MIN_X = 60;
+  const PLAYER_MAX_X = CPU_X - 60;
 
   let level = 1;
   let playerHp, cpuHp, cpuMaxHp;
@@ -287,12 +303,16 @@
   let playerSwing = 0, cpuSwing = 0;
   let playerHitFlash = 0, cpuHitFlash = 0;
   let popups = [];
-  let cpuAttackTimer = 0;
+  let cpuAttackTimer = 0, cpuTelegraph = 0;
   let gameActive = true;
   let paused = false;
+  let playerX = 150;
+  let playerJumpH = 0, playerJumpV = 0;
+  const moveKeys = { left: false, right: false };
 
   function weapon() { return WEAPONS[level - 1]; }
   function cpuConf() { return CPU_CONFIG[level - 1]; }
+  function isJumping() { return playerJumpH > 0; }
 
   function startLevel(n) {
     level = n;
@@ -303,9 +323,13 @@
     shieldCdLeft = 0;
     shieldTimeLeft = 0;
     cpuAttackTimer = cpuConf().interval;
+    cpuTelegraph = 0;
     gameActive = true;
     paused = false;
     popups = [];
+    playerX = 150;
+    playerJumpH = 0;
+    playerJumpV = 0;
     levelNumEl.textContent = level;
     weaponNameEl.textContent = weapon().name;
     updateBars();
@@ -327,10 +351,15 @@
     if (!gameActive || paused || attackCdLeft > 0) return;
     attackCdLeft = ATTACK_COOLDOWN;
     playerSwing = 1;
+    const inRange = Math.abs(playerX - CPU_X) <= HIT_RANGE;
+    if (!inRange) {
+      addPopup(playerX, GROUND_Y - 140, 'MISS', '#94a3b8');
+      return;
+    }
     const dmg = weapon().damage;
     cpuHp = Math.max(0, cpuHp - dmg);
     cpuHitFlash = 1;
-    addPopup(W - 150, GROUND_Y - 140, '-' + dmg, '#fca5a5');
+    addPopup(CPU_X, GROUND_Y - 140, '-' + dmg, '#fca5a5');
     updateBars();
     if (cpuHp <= 0) {
       gameActive = false;
@@ -344,16 +373,25 @@
     shieldCdLeft = SHIELD_COOLDOWN;
   }
 
-  function cpuAttack() {
+  function resolveCpuAttack() {
     cpuSwing = 1;
+    const inRange = Math.abs(playerX - CPU_X) <= HIT_RANGE;
+    if (!inRange) {
+      addPopup(playerX, GROUND_Y - 140, 'DODGE!', '#4ade80');
+      return;
+    }
+    if (isJumping()) {
+      addPopup(playerX, GROUND_Y - 140, 'DODGE!', '#4ade80');
+      return;
+    }
     if (shieldTimeLeft > 0) {
-      addPopup(150, GROUND_Y - 140, 'BLOCKED', '#60a5fa');
+      addPopup(playerX, GROUND_Y - 140, 'BLOCKED', '#60a5fa');
       return;
     }
     const dmg = cpuConf().damage;
     playerHp = Math.max(0, playerHp - dmg);
     playerHitFlash = 1;
-    addPopup(150, GROUND_Y - 140, '-' + dmg, '#fca5a5');
+    addPopup(playerX, GROUND_Y - 140, '-' + dmg, '#fca5a5');
     updateBars();
     if (playerHp <= 0) {
       gameActive = false;
@@ -519,11 +557,25 @@
     ctx.stroke();
   }
 
+  function drawTelegraph() {
+    if (cpuTelegraph <= 0) return;
+    const pulse = 0.6 + Math.sin(performance.now() / 60) * 0.4;
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = '#facc15';
+    ctx.font = 'bold 26px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('!', CPU_X, GROUND_Y - 190);
+    ctx.restore();
+  }
+
   function render() {
+    const playerY = GROUND_Y - playerJumpH;
     drawArena();
-    drawShield(150, GROUND_Y);
-    drawStick(150, GROUND_Y, '#e2e8f0', playerSwing, playerHitFlash, weapon(), 1);
-    drawStick(W - 150, GROUND_Y, '#f87171', cpuSwing, cpuHitFlash, null, -1);
+    drawShield(playerX, playerY);
+    drawStick(playerX, playerY, '#e2e8f0', playerSwing, playerHitFlash, weapon(), 1);
+    drawStick(CPU_X, GROUND_Y, '#f87171', cpuSwing, cpuHitFlash, null, -1);
+    drawTelegraph();
     drawPopups();
   }
 
@@ -542,10 +594,25 @@
         updateBars();
       }
 
-      cpuAttackTimer -= dt;
-      if (cpuAttackTimer <= 0) {
-        cpuAttack();
-        cpuAttackTimer = cpuConf().interval;
+      if (moveKeys.left) playerX -= MOVE_SPEED * dt;
+      if (moveKeys.right) playerX += MOVE_SPEED * dt;
+      playerX = Math.max(PLAYER_MIN_X, Math.min(PLAYER_MAX_X, playerX));
+
+      if (playerJumpH > 0 || playerJumpV > 0) {
+        playerJumpV -= GRAVITY * dt;
+        playerJumpH = Math.max(0, playerJumpH + playerJumpV * dt);
+        if (playerJumpH <= 0) { playerJumpH = 0; playerJumpV = 0; }
+      }
+
+      if (cpuTelegraph > 0) {
+        cpuTelegraph -= dt;
+        if (cpuTelegraph <= 0) resolveCpuAttack();
+      } else {
+        cpuAttackTimer -= dt;
+        if (cpuAttackTimer <= 0) {
+          cpuTelegraph = ATTACK_TELEGRAPH;
+          cpuAttackTimer = cpuConf().interval;
+        }
       }
     }
 
@@ -563,12 +630,37 @@
     requestAnimationFrame(loop);
   }
 
+  function jump() {
+    if (!gameActive || paused || playerJumpH > 0) return;
+    playerJumpV = JUMP_VELOCITY;
+  }
+
   window.addEventListener('keydown', (e) => {
-    if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) playerAttack(); }
+    if (['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'KeyW', 'KeyA'].includes(e.code)) e.preventDefault();
+    if (e.code === 'Space') { if (!e.repeat) playerAttack(); }
     if (e.code === 'KeyD') { if (!e.repeat) playerDefend(); }
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') moveKeys.left = true;
+    if (e.code === 'ArrowRight') moveKeys.right = true;
+    if ((e.code === 'ArrowUp' || e.code === 'KeyW') && !e.repeat) jump();
   });
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') moveKeys.left = false;
+    if (e.code === 'ArrowRight') moveKeys.right = false;
+  });
+
   attackBtn.addEventListener('click', playerAttack);
   defendBtn.addEventListener('click', playerDefend);
+  document.getElementById('jumpBtn').addEventListener('click', jump);
+
+  function bindHold(el, onDown, onUp) {
+    el.addEventListener('mousedown', onDown);
+    el.addEventListener('touchstart', (e) => { e.preventDefault(); onDown(); }, { passive: false });
+    el.addEventListener('mouseup', onUp);
+    el.addEventListener('mouseleave', onUp);
+    el.addEventListener('touchend', (e) => { e.preventDefault(); onUp(); }, { passive: false });
+  }
+  bindHold(document.getElementById('leftBtn'), () => moveKeys.left = true, () => moveKeys.left = false);
+  bindHold(document.getElementById('rightBtn'), () => moveKeys.right = true, () => moveKeys.right = false);
 
   startLevel(1);
   requestAnimationFrame(loop);
