@@ -137,13 +137,17 @@
   }
   .back-btn:hover {
     border-color: var(--accent);
-    color: var(--accent);
     transform: translateX(-2px);
+  }
+  .home-icon {
+    font-size: 1.3rem;
+    line-height: 1;
+    filter: grayscale(1) brightness(0);
   }
 </style>
 </head>
 <body>
-  <a class="back-btn" href="./" aria-label="Back to home">&larr;</a>
+  <a class="back-btn" href="./" aria-label="Back to home"><span class="home-icon">&#127968;</span></a>
   <main class="card">
     <h1>Connect 4</h1>
     <div class="difficulty-row">
