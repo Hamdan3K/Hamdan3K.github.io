@@ -64,9 +64,10 @@
     margin-bottom: 1.25rem;
   }
   canvas {
-    width: min(90vw, 600px);
+    width: min(95vw, 760px);
     height: auto;
     max-width: 100%;
+    cursor: pointer;
   }
   .hint {
     font-size: 0.85rem;
@@ -213,7 +214,7 @@
     <h1>Rock Miner</h1>
     <div class="status">Points: <strong id="score">0</strong></div>
     <div class="board-wrap">
-      <canvas id="scene" width="520" height="480"></canvas>
+      <canvas id="scene" width="800" height="480"></canvas>
     </div>
     <p class="hint">Press <kbd>Space</kbd> or tap the rock to mine — each hit is worth <strong id="clickValue">1</strong> point.</p>
     <div class="controls">
@@ -248,6 +249,10 @@
     { id: 3, name: 'Emerald Pickaxe', cost: 400, bonus: 4, head: '#22c55e', handle: '#8a5a2b' }
   ];
 
+  const STAND_LEFT = 280, STAND_W = 112;
+  const ICON_SIZE = 24, ICON_GAP = 27;
+  const ICON_START_X = STAND_LEFT + 8, ICON_Y = 178;
+
   let score = 0;
   let owned = [false, false, false, false];
   let swing = 0;
@@ -259,6 +264,16 @@
     let v = 1;
     PICKAXES.forEach((p, i) => { if (owned[i]) v += p.bonus; });
     return v;
+  }
+
+  function purchasePickaxe(i) {
+    const p = PICKAXES[i];
+    if (owned[i] || score < p.cost) return false;
+    score -= p.cost;
+    owned[i] = true;
+    updateScoreUI();
+    renderShop();
+    return true;
   }
 
   function currentPickaxe() {
@@ -288,13 +303,7 @@
       const buyBtn = document.createElement('button');
       buyBtn.textContent = owned[i] ? 'Owned' : 'Buy';
       buyBtn.disabled = owned[i] || score < p.cost;
-      buyBtn.addEventListener('click', () => {
-        if (owned[i] || score < p.cost) return;
-        score -= p.cost;
-        owned[i] = true;
-        updateScoreUI();
-        renderShop();
-      });
+      buyBtn.addEventListener('click', () => purchasePickaxe(i));
 
       row.appendChild(iconCanvas);
       row.appendChild(info);
@@ -322,6 +331,127 @@
     c.quadraticCurveTo(0, -size * 0.15, -size * 0.34, -size * 0.34);
     c.fill();
     c.restore();
+  }
+
+  const pickaxeIconCanvases = PICKAXES.map(p => {
+    const c = document.createElement('canvas');
+    c.width = 40;
+    c.height = 40;
+    drawPickaxeIcon(c.getContext('2d'), p, 40);
+    return c;
+  });
+
+  function drawShopCat(cx, cy) {
+    const fur = '#ea580c';
+    const furDark = '#c2410c';
+    ctx.fillStyle = fur;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 35, 30, 26, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx, cy, 26, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(cx - 20, cy - 14);
+    ctx.lineTo(cx - 28, cy - 36);
+    ctx.lineTo(cx - 6, cy - 22);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx + 20, cy - 14);
+    ctx.lineTo(cx + 28, cy - 36);
+    ctx.lineTo(cx + 6, cy - 22);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#f3a6b2';
+    ctx.beginPath();
+    ctx.moveTo(cx - 17, cy - 17);
+    ctx.lineTo(cx - 21, cy - 29);
+    ctx.lineTo(cx - 10, cy - 21);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx + 17, cy - 17);
+    ctx.lineTo(cx + 21, cy - 29);
+    ctx.lineTo(cx + 10, cy - 21);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = furDark;
+    ctx.lineWidth = 3;
+    [-10, 0, 10].forEach(dx => {
+      ctx.beginPath();
+      ctx.moveTo(cx + dx, cy - 24);
+      ctx.lineTo(cx + dx, cy - 10);
+      ctx.stroke();
+    });
+
+    ctx.fillStyle = '#1f2937';
+    ctx.beginPath();
+    ctx.ellipse(cx - 9, cy - 2, 3.5, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cx + 9, cy - 2, 3.5, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#f3a6b2';
+    ctx.beginPath();
+    ctx.moveTo(cx - 3, cy + 6);
+    ctx.lineTo(cx + 3, cy + 6);
+    ctx.lineTo(cx, cy + 10);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 1;
+    [-1, 1].forEach(side => {
+      for (let i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(cx + side * 14, cy + 4 + i * 4);
+        ctx.lineTo(cx + side * 32, cy + 2 + i * 6);
+        ctx.stroke();
+      }
+    });
+  }
+
+  function drawShopStand() {
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(STAND_LEFT - 10, 100, STAND_W + 20, 22);
+    ctx.fillStyle = '#ffffff';
+    const stripeW = (STAND_W + 20) / 12;
+    for (let i = 0; i < 6; i++) {
+      ctx.fillRect(STAND_LEFT - 10 + i * stripeW * 2, 100, stripeW, 22);
+    }
+
+    ctx.strokeStyle = '#78716c';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(STAND_LEFT - 5, 122);
+    ctx.lineTo(STAND_LEFT - 5, 195);
+    ctx.moveTo(STAND_LEFT + STAND_W + 5, 122);
+    ctx.lineTo(STAND_LEFT + STAND_W + 5, 195);
+    ctx.stroke();
+
+    drawShopCat(STAND_LEFT + STAND_W / 2, 165);
+
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(STAND_LEFT, 195, STAND_W, 15);
+    ctx.fillStyle = '#fecaca';
+    ctx.fillRect(STAND_LEFT, 190, STAND_W, 6);
+
+    PICKAXES.forEach((p, i) => {
+      const x = ICON_START_X + i * ICON_GAP;
+      const y = ICON_Y;
+      ctx.fillStyle = owned[i] ? 'rgba(34,197,94,0.35)' : 'rgba(255,255,255,0.55)';
+      roundRect(x - 3, y - 3, ICON_SIZE + 6, ICON_SIZE + 6, 4);
+      ctx.fill();
+      ctx.drawImage(pickaxeIconCanvases[i], x, y, ICON_SIZE, ICON_SIZE);
+      ctx.fillStyle = '#1f2937';
+      ctx.font = 'bold 8px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(owned[i] ? '✓' : String(p.cost), x + ICON_SIZE / 2, y + ICON_SIZE + 10);
+    });
   }
 
   function updateScoreUI() {
@@ -534,7 +664,8 @@
   }
 
   const SCALE = 2;
-  const SCENE_W = 260, SCENE_H = 240;
+  const SCENE_W = 400, SCENE_H = 240;
+  const STAND_X = 300;
 
   function drawGround() {
     ctx.fillStyle = '#57534e';
@@ -550,6 +681,7 @@
     drawGround();
     drawRock();
     drawCat();
+    drawShopStand();
     drawPopups();
     ctx.restore();
 
@@ -568,7 +700,21 @@
     }
   });
 
-  canvas.addEventListener('click', mine);
+  canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const px = (e.clientX - rect.left) * (canvas.width / rect.width) / SCALE;
+    const py = (e.clientY - rect.top) * (canvas.height / rect.height) / SCALE;
+
+    for (let i = 0; i < PICKAXES.length; i++) {
+      const x = ICON_START_X + i * ICON_GAP;
+      const y = ICON_Y;
+      if (px >= x - 3 && px <= x + ICON_SIZE + 3 && py >= y - 3 && py <= y + ICON_SIZE + 3) {
+        purchasePickaxe(i);
+        return;
+      }
+    }
+    mine();
+  });
   resetBtn.addEventListener('click', reset);
   shopOpenBtn.addEventListener('click', openShop);
   shopCloseBtn.addEventListener('click', closeShop);
