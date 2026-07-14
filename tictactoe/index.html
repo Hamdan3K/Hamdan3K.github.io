@@ -133,6 +133,15 @@
     background: var(--gold-light);
     color: var(--black);
   }
+  .cell.selected {
+    border-color: var(--red);
+    box-shadow: inset 0 0 0 3px rgba(200, 16, 46, 0.35);
+  }
+  .hint {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin: 0 0 1.25rem;
+  }
   .controls {
     display: flex;
     gap: 0.75rem;
@@ -178,7 +187,8 @@
         <option value="easy">Easy</option>
       </select>
     </div>
-    <div class="status" id="status">Your move — you're X</div>
+    <p class="hint">Each player keeps 3 marks on the board — once you've placed 3, tap one of your X's then an empty cell to relocate it. No draws: play continues until someone lines up 3.</p>
+    <div class="status" id="status">Your move — place an X</div>
     <div class="board" id="board"></div>
     <div class="controls">
       <button id="reset">New Game</button>
@@ -201,15 +211,24 @@
     [0,4,8],[2,4,6]
   ];
 
+  const MAX_MARKS = 3;
+  const UNBEATABLE_DEPTH = 6;
+  const HARD_DEPTH = 4;
+
   let board = Array(9).fill(null);
   let gameOver = false;
+  let selected = null;
   let cells = [];
 
   function render() {
     boardEl.innerHTML = '';
     cells = board.map((val, i) => {
       const cell = document.createElement('div');
-      cell.className = 'cell' + (val ? ' taken' : '') + (val === 'O' ? ' o' : '');
+      let cls = 'cell';
+      if (val) cls += ' taken';
+      if (val === 'O') cls += ' o';
+      if (i === selected) cls += ' selected';
+      cell.className = cls;
       cell.textContent = val || '';
       cell.addEventListener('click', () => onCellClick(i));
       boardEl.appendChild(cell);
@@ -224,13 +243,129 @@
         return { player: b[a], line };
       }
     }
-    if (b.every(v => v)) return { player: 'draw', line: [] };
     return null;
   }
 
+  function countMarks(b, mark) {
+    return b.filter(v => v === mark).length;
+  }
+
+  function emptyCells(b) {
+    return b.map((v, i) => (v ? null : i)).filter(v => v !== null);
+  }
+
+  function legalMoves(b, mark) {
+    const empties = emptyCells(b);
+    if (countMarks(b, mark) < MAX_MARKS) {
+      return empties.map(to => ({ to }));
+    }
+    const pieces = b.map((v, i) => (v === mark ? i : null)).filter(v => v !== null);
+    const moves = [];
+    for (const from of pieces) {
+      for (const to of empties) moves.push({ from, to });
+    }
+    return moves;
+  }
+
+  function applyMove(b, mark, move) {
+    const nb = b.slice();
+    if (move.from !== undefined) nb[move.from] = null;
+    nb[move.to] = mark;
+    return nb;
+  }
+
+  function evaluate(b) {
+    let score = 0;
+    for (const line of WIN_LINES) {
+      const vals = line.map(i => b[i]);
+      const aiCount = vals.filter(v => v === AI).length;
+      const huCount = vals.filter(v => v === HUMAN).length;
+      if (aiCount > 0 && huCount > 0) continue;
+      if (aiCount === 2) score += 5;
+      else if (aiCount === 1) score += 1;
+      if (huCount === 2) score -= 5;
+      else if (huCount === 1) score -= 1;
+    }
+    return score;
+  }
+
+  function minimax(b, isMaximizing, depth, maxDepth, alpha, beta) {
+    const result = winner(b);
+    if (result) return result.player === AI ? 1000 - depth : depth - 1000;
+    if (depth >= maxDepth) return evaluate(b);
+    const mark = isMaximizing ? AI : HUMAN;
+    const moves = legalMoves(b, mark);
+    if (isMaximizing) {
+      let best = -Infinity;
+      for (const move of moves) {
+        const score = minimax(applyMove(b, AI, move), false, depth + 1, maxDepth, alpha, beta);
+        best = Math.max(best, score);
+        alpha = Math.max(alpha, score);
+        if (beta <= alpha) break;
+      }
+      return best;
+    }
+    let best = Infinity;
+    for (const move of moves) {
+      const score = minimax(applyMove(b, HUMAN, move), true, depth + 1, maxDepth, alpha, beta);
+      best = Math.min(best, score);
+      beta = Math.min(beta, score);
+      if (beta <= alpha) break;
+    }
+    return best;
+  }
+
+  function bestMoveGeneric(b, maxDepth) {
+    let best = { score: -Infinity, move: null };
+    for (const move of legalMoves(b, AI)) {
+      const score = minimax(applyMove(b, AI, move), false, 1, maxDepth, -Infinity, Infinity);
+      if (score > best.score) best = { score, move };
+    }
+    return best.move;
+  }
+
+  function chooseAiMove(b, difficulty) {
+    const moves = legalMoves(b, AI);
+    if (!moves.length) return null;
+    if (difficulty === 'easy') return moves[Math.floor(Math.random() * moves.length)];
+    if (difficulty === 'hard') {
+      return Math.random() < 0.7 ? bestMoveGeneric(b, HARD_DEPTH) : moves[Math.floor(Math.random() * moves.length)];
+    }
+    return bestMoveGeneric(b, UNBEATABLE_DEPTH);
+  }
+
+  function updateStatusForHumanTurn() {
+    statusEl.textContent = countMarks(board, HUMAN) < MAX_MARKS
+      ? "Your move — place an X"
+      : "Your move — tap an X, then an empty cell to move it";
+  }
+
   function onCellClick(i) {
-    if (gameOver || board[i]) return;
+    if (gameOver) return;
+    const humanCount = countMarks(board, HUMAN);
+
+    if (humanCount < MAX_MARKS) {
+      if (board[i]) return;
+      board[i] = HUMAN;
+      afterHumanMove();
+      return;
+    }
+
+    if (selected === null) {
+      if (board[i] === HUMAN) { selected = i; render(); }
+      return;
+    }
+    if (i === selected) { selected = null; render(); return; }
+    if (board[i] === HUMAN) { selected = i; render(); return; }
+    if (board[i]) return;
+
+    board[selected] = null;
     board[i] = HUMAN;
+    selected = null;
+    afterHumanMove();
+  }
+
+  function afterHumanMove() {
     render();
     const result = winner(board);
     if (result) return finish(result);
@@ -240,83 +375,27 @@
 
   function computerMove() {
     if (gameOver) return;
-    const difficulty = difficultySel.value;
-    let move;
-    if (difficulty === 'easy') {
-      move = randomMove(board);
-    } else if (difficulty === 'hard') {
-      move = Math.random() < 0.7 ? bestMove(board) : randomMove(board);
-    } else {
-      move = bestMove(board);
-    }
-    if (move === undefined || move === null) return;
-    board[move] = AI;
+    const move = chooseAiMove(board, difficultySel.value);
+    if (!move) return;
+    board = applyMove(board, AI, move);
     render();
     const result = winner(board);
     if (result) return finish(result);
-    statusEl.textContent = "Your move — you're X";
-  }
-
-  function randomMove(b) {
-    const empty = b.map((v, i) => (v ? null : i)).filter(v => v !== null);
-    return empty[Math.floor(Math.random() * empty.length)];
-  }
-
-  function bestMove(b) {
-    let best = { score: -Infinity, move: null };
-    for (let i = 0; i < 9; i++) {
-      if (b[i]) continue;
-      b[i] = AI;
-      const score = minimax(b, false, 0);
-      b[i] = null;
-      if (score > best.score) best = { score, move: i };
-    }
-    return best.move;
-  }
-
-  function minimax(b, isMaximizing, depth) {
-    const result = winner(b);
-    if (result) {
-      if (result.player === AI) return 10 - depth;
-      if (result.player === HUMAN) return depth - 10;
-      return 0;
-    }
-    if (isMaximizing) {
-      let best = -Infinity;
-      for (let i = 0; i < 9; i++) {
-        if (b[i]) continue;
-        b[i] = AI;
-        best = Math.max(best, minimax(b, false, depth + 1));
-        b[i] = null;
-      }
-      return best;
-    } else {
-      let best = Infinity;
-      for (let i = 0; i < 9; i++) {
-        if (b[i]) continue;
-        b[i] = HUMAN;
-        best = Math.min(best, minimax(b, true, depth + 1));
-        b[i] = null;
-      }
-      return best;
-    }
+    updateStatusForHumanTurn();
   }
 
   function finish(result) {
     gameOver = true;
-    if (result.player === 'draw') {
-      statusEl.textContent = "It's a draw!";
-    } else {
-      result.line.forEach(i => cells[i].classList.add('win'));
-      statusEl.textContent = result.player === HUMAN ? 'You win! 🎉' : 'Computer wins!';
-    }
+    result.line.forEach(i => cells[i].classList.add('win'));
+    statusEl.textContent = result.player === HUMAN ? 'You win! 🎉' : 'Computer wins!';
     cells.forEach(c => c.classList.add('disabled'));
   }
 
   function newGame() {
     board = Array(9).fill(null);
     gameOver = false;
-    statusEl.textContent = "Your move — you're X";
+    selected = null;
+    updateStatusForHumanTurn();
     render();
   }
 
