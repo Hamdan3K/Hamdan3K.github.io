@@ -289,13 +289,15 @@
   const SHIELD_COOLDOWN = 3.0;
   const HEAL_RATE = 2;
   const ATTACK_TELEGRAPH = 0.35;
-  const CPU_X = W - 150;
+  const CPU_X_START = W - 150;
   const HIT_RANGE = 120;
   const MOVE_SPEED = 200;
+  const CPU_MOVE_SPEED = 110;
+  const MIN_GAP = 70;
   const JUMP_VELOCITY = 300;
   const GRAVITY = 900;
   const PLAYER_MIN_X = 60;
-  const PLAYER_MAX_X = CPU_X - 60;
+  const ARENA_MAX_X = W - 60;
 
   let level = 1;
   let playerHp, cpuHp, cpuMaxHp;
@@ -307,6 +309,7 @@
   let gameActive = true;
   let paused = false;
   let playerX = 150;
+  let cpuX = CPU_X_START;
   let playerJumpH = 0, playerJumpV = 0;
   const moveKeys = { left: false, right: false };
 
@@ -328,6 +331,7 @@
     paused = false;
     popups = [];
     playerX = 150;
+    cpuX = CPU_X_START;
     playerJumpH = 0;
     playerJumpV = 0;
     levelNumEl.textContent = level;
@@ -351,7 +355,7 @@
     if (!gameActive || paused || attackCdLeft > 0) return;
     attackCdLeft = ATTACK_COOLDOWN;
     playerSwing = 1;
-    const inRange = Math.abs(playerX - CPU_X) <= HIT_RANGE;
+    const inRange = Math.abs(playerX - cpuX) <= HIT_RANGE;
     if (!inRange) {
       addPopup(playerX, GROUND_Y - 140, 'MISS', '#94a3b8');
       return;
@@ -359,7 +363,7 @@
     const dmg = weapon().damage;
     cpuHp = Math.max(0, cpuHp - dmg);
     cpuHitFlash = 1;
-    addPopup(CPU_X, GROUND_Y - 140, '-' + dmg, '#fca5a5');
+    addPopup(cpuX, GROUND_Y - 140, '-' + dmg, '#fca5a5');
     updateBars();
     if (cpuHp <= 0) {
       gameActive = false;
@@ -375,7 +379,7 @@
 
   function resolveCpuAttack() {
     cpuSwing = 1;
-    const inRange = Math.abs(playerX - CPU_X) <= HIT_RANGE;
+    const inRange = Math.abs(playerX - cpuX) <= HIT_RANGE;
     if (!inRange) {
       addPopup(playerX, GROUND_Y - 140, 'DODGE!', '#4ade80');
       return;
@@ -557,7 +561,7 @@
     ctx.fillStyle = '#facc15';
     ctx.font = 'bold 26px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('!', CPU_X, GROUND_Y - 190);
+    ctx.fillText('!', cpuX, GROUND_Y - 190);
     ctx.restore();
   }
 
@@ -566,7 +570,7 @@
     drawArena();
     drawShield(playerX, playerY);
     drawStick(playerX, playerY, '#e2e8f0', playerSwing, playerHitFlash, weapon(), 1);
-    drawStick(CPU_X, GROUND_Y, '#f87171', cpuSwing, cpuHitFlash, null, -1);
+    drawStick(cpuX, GROUND_Y, '#f87171', cpuSwing, cpuHitFlash, null, -1);
     drawTelegraph();
     drawPopups();
   }
@@ -588,13 +592,21 @@
 
       if (moveKeys.left) playerX -= MOVE_SPEED * dt;
       if (moveKeys.right) playerX += MOVE_SPEED * dt;
-      playerX = Math.max(PLAYER_MIN_X, Math.min(PLAYER_MAX_X, playerX));
+      playerX = Math.max(PLAYER_MIN_X, Math.min(cpuX - MIN_GAP, playerX));
 
       if (playerJumpH > 0 || playerJumpV > 0) {
         playerJumpV -= GRAVITY * dt;
         playerJumpH = Math.max(0, playerJumpH + playerJumpV * dt);
         if (playerJumpH <= 0) { playerJumpH = 0; playerJumpV = 0; }
       }
+
+      if (cpuTelegraph <= 0) {
+        const gap = playerX - cpuX;
+        if (Math.abs(gap) > HIT_RANGE * 0.85) {
+          cpuX += Math.sign(gap) * CPU_MOVE_SPEED * dt;
+        }
+      }
+      cpuX = Math.max(playerX + MIN_GAP, Math.min(ARENA_MAX_X, cpuX));
 
       if (cpuTelegraph > 0) {
         cpuTelegraph -= dt;
