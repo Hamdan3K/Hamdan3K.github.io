@@ -37,7 +37,7 @@
     padding: 2rem 1rem;
   }
   .card {
-    max-width: 420px;
+    max-width: 440px;
     width: 100%;
     background: var(--card);
     border-radius: 16px;
@@ -62,12 +62,12 @@
   }
   .board {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    gap: 8px;
     margin: 0 auto 1.75rem;
     width: 100%;
-    max-width: 300px;
+    max-width: 340px;
     aspect-ratio: 1 / 1;
   }
   .cell {
@@ -78,7 +78,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2.5rem;
+    font-size: 2rem;
     font-weight: 700;
     cursor: pointer;
     color: var(--accent);
@@ -182,7 +182,7 @@
         <option value="easy">Easy</option>
       </select>
     </div>
-    <p class="hint">Each player keeps 3 marks on the board — once you've placed 3, tap one of your X's then an empty cell to relocate it. No draws: play continues until someone lines up 3.</p>
+    <p class="hint">4×4 board — get 4 in a row to win. Each player keeps 4 marks on the board; once you've placed 4, tap one of your X's then an empty cell to relocate it. No draws: play continues until someone lines up 4.</p>
     <div class="status" id="status">Your move — place an X</div>
     <div class="board" id="board"></div>
     <div class="controls">
@@ -200,17 +200,19 @@
 
   const HUMAN = 'X';
   const AI = 'O';
-  const WIN_LINES = [
-    [0,1,2],[3,4,5],[6,7,8],
-    [0,3,6],[1,4,7],[2,5,8],
-    [0,4,8],[2,4,6]
-  ];
+  const SIZE = 4;
+  const WIN_LINES = (() => {
+    const lines = [];
+    for (let r = 0; r < SIZE; r++) lines.push([0, 1, 2, 3].map(c => r * SIZE + c));
+    for (let c = 0; c < SIZE; c++) lines.push([0, 1, 2, 3].map(r => r * SIZE + c));
+    lines.push([0, 1, 2, 3].map(i => i * SIZE + i));
+    lines.push([0, 1, 2, 3].map(i => i * SIZE + (SIZE - 1 - i)));
+    return lines;
+  })();
 
-  const MAX_MARKS = 3;
-  const UNBEATABLE_DEPTH = 6;
-  const HARD_DEPTH = 4;
+  const MAX_MARKS = 4;
 
-  let board = Array(9).fill(null);
+  let board = Array(SIZE * SIZE).fill(null);
   let gameOver = false;
   let selected = null;
   let cells = [];
@@ -233,9 +235,9 @@
 
   function winner(b) {
     for (const line of WIN_LINES) {
-      const [a, b1, c] = line;
-      if (b[a] && b[a] === b[b1] && b[a] === b[c]) {
-        return { player: b[a], line };
+      const first = b[line[0]];
+      if (first && line.every(i => b[i] === first)) {
+        return { player: first, line };
       }
     }
     return null;
@@ -276,9 +278,11 @@
       const aiCount = vals.filter(v => v === AI).length;
       const huCount = vals.filter(v => v === HUMAN).length;
       if (aiCount > 0 && huCount > 0) continue;
-      if (aiCount === 2) score += 5;
+      if (aiCount === 3) score += 12;
+      else if (aiCount === 2) score += 4;
       else if (aiCount === 1) score += 1;
-      if (huCount === 2) score -= 5;
+      if (huCount === 3) score -= 15;
+      else if (huCount === 2) score -= 4;
       else if (huCount === 1) score -= 1;
     }
     return score;
@@ -319,14 +323,21 @@
     return best.move;
   }
 
+  function pickDepth(b, difficulty) {
+    const inMovementPhase = countMarks(b, AI) >= MAX_MARKS && countMarks(b, HUMAN) >= MAX_MARKS;
+    if (difficulty === 'hard') return inMovementPhase ? 2 : 3;
+    return inMovementPhase ? 3 : 5;
+  }
+
   function chooseAiMove(b, difficulty) {
     const moves = legalMoves(b, AI);
     if (!moves.length) return null;
     if (difficulty === 'easy') return moves[Math.floor(Math.random() * moves.length)];
+    const depth = pickDepth(b, difficulty);
     if (difficulty === 'hard') {
-      return Math.random() < 0.7 ? bestMoveGeneric(b, HARD_DEPTH) : moves[Math.floor(Math.random() * moves.length)];
+      return Math.random() < 0.7 ? bestMoveGeneric(b, depth) : moves[Math.floor(Math.random() * moves.length)];
     }
-    return bestMoveGeneric(b, UNBEATABLE_DEPTH);
+    return bestMoveGeneric(b, depth);
   }
 
   function updateStatusForHumanTurn() {
@@ -387,7 +398,7 @@
   }
 
   function newGame() {
-    board = Array(9).fill(null);
+    board = Array(SIZE * SIZE).fill(null);
     gameOver = false;
     selected = null;
     updateStatusForHumanTurn();
