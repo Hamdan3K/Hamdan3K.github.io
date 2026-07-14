@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maze — Hamdan</title>
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --accent: #0284c7;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--card);
+    color: var(--text);
+  }
+  .screen {
+    position: fixed;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    background: var(--card);
+  }
+  .screen.active { display: flex; }
+  h1 {
+    font-weight: 800;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    color: var(--accent);
+  }
+  .subtitle {
+    color: var(--muted);
+    margin-bottom: 2rem;
+  }
+  .level-row {
+    display: flex;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .level-card {
+    width: 150px;
+    padding: 1.5rem 1rem;
+    border-radius: 16px;
+    border: 2px solid var(--muted);
+    cursor: pointer;
+    background: transparent;
+    color: var(--text);
+    font-family: inherit;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .level-card:hover { transform: translateY(-4px); border-color: var(--accent); }
+  .level-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+  .level-name { font-weight: 700; }
+  .level-size { color: var(--muted); font-size: 0.8rem; margin-top: 0.25rem; }
+  #mazeScreen { padding: 0; }
+  #mazeCanvas { width: 100%; height: 100%; display: block; }
+  .hud {
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #fff;
+    font-weight: 700;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+    z-index: 5;
+    display: none;
+    text-align: center;
+  }
+  .hud.active { display: block; }
+  .pad {
+    position: fixed;
+    bottom: 1.25rem;
+    right: 1.25rem;
+    display: none;
+    grid-template-columns: repeat(3, 54px);
+    grid-template-rows: repeat(2, 54px);
+    gap: 6px;
+    z-index: 5;
+  }
+  .pad.active { display: grid; }
+  .pad button {
+    border-radius: 10px;
+    border: none;
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    font-size: 1.3rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  #padUp { grid-column: 2; grid-row: 1; }
+  #padLeft { grid-column: 1; grid-row: 2; }
+  #padDown { grid-column: 2; grid-row: 2; }
+  #padRight { grid-column: 3; grid-row: 2; }
+  .menu-btn {
+    position: fixed;
+    bottom: 1.25rem;
+    left: 1.25rem;
+    z-index: 5;
+    display: none;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 10px;
+    padding: 0.6rem 1rem;
+    border: none;
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    cursor: pointer;
+  }
+  .menu-btn.active { display: block; }
+  .back-btn {
+    position: fixed;
+    top: 1.25rem;
+    left: 1.25rem;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    border: 1px solid var(--muted);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+    z-index: 20;
+  }
+  .home-icon { font-size: 1.3rem; line-height: 1; filter: grayscale(1) brightness(0); }
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 15;
+  }
+  .overlay.open { display: flex; }
+  .overlay-panel {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
+    max-width: 360px;
+    width: 90%;
+  }
+  .overlay-panel h2 { margin-bottom: 0.75rem; color: var(--accent); }
+  .overlay-panel p { color: var(--muted); margin-bottom: 1.25rem; }
+  .action-btn {
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 12px;
+    padding: 0.75rem 1.8rem;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+    margin: 0.25rem;
+  }
+  .secondary-btn {
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 10px;
+    padding: 0.6rem 1.3rem;
+    border: 1px solid var(--muted);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    margin: 0.25rem;
+  }
+</style>
+</head>
+<body>
+  <a class="back-btn" href="/" aria-label="Back to home"><span class="home-icon">&#127968;</span></a>
+
+  <div class="screen active" id="screenMenu">
+    <h1>Maze</h1>
+    <div class="subtitle">Guide the rat to the cheese. Choose a difficulty.</div>
+    <div class="level-row">
+      <button class="level-card" data-level="0">
+        <div class="level-icon">🐭</div>
+        <div class="level-name">Easy</div>
+        <div class="level-size">6 × 6</div>
+      </button>
+      <button class="level-card" data-level="1">
+        <div class="level-icon">🐭</div>
+        <div class="level-name">Medium</div>
+        <div class="level-size">9 × 9</div>
+      </button>
+      <button class="level-card" data-level="2">
+        <div class="level-icon">🐭</div>
+        <div class="level-name">Hard</div>
+        <div class="level-size">13 × 13</div>
+      </button>
+    </div>
+  </div>
+
+  <div class="screen" id="mazeScreen">
+    <canvas id="mazeCanvas"></canvas>
+  </div>
+
+  <div class="hud" id="hud">
+    <div id="hudLevel">Easy Maze</div>
+  </div>
+  <button class="menu-btn" id="menuBtn">Menu</button>
+  <div class="pad" id="pad">
+    <button id="padUp">&uarr;</button>
+    <button id="padLeft">&larr;</button>
+    <button id="padDown">&darr;</button>
+    <button id="padRight">&rarr;</button>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="overlay-panel">
+      <h2 id="overlayTitle">Cheese Found!</h2>
+      <p id="overlayText">You solved the Easy maze.</p>
+      <button class="action-btn" id="nextBtn">Next Level</button>
+      <button class="secondary-btn" id="retryBtn">Retry Maze</button>
+      <button class="secondary-btn" id="menuBtn2">Level Select</button>
+    </div>
+  </div>
+
+<script>
+(function () {
+  const DIFFICULTIES = [
+    { name: 'Easy', cols: 6, rows: 6 },
+    { name: 'Medium', cols: 9, rows: 9 },
+    { name: 'Hard', cols: 13, rows: 13 }
+  ];
+  const CELL = 6;
+  const WALL_H = 3;
+  const RAT_RADIUS = 0.85;
+  const MOVE_SPEED = 9;
+
+  const screenMenu = document.getElementById('screenMenu');
+  const mazeScreen = document.getElementById('mazeScreen');
+  const hud = document.getElementById('hud');
+  const hudLevel = document.getElementById('hudLevel');
+  const pad = document.getElementById('pad');
+  const menuBtn = document.getElementById('menuBtn');
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlayTitle');
+  const overlayText = document.getElementById('overlayText');
+  const nextBtn = document.getElementById('nextBtn');
+  const retryBtn = document.getElementById('retryBtn');
+  const menuBtn2 = document.getElementById('menuBtn2');
+
+  let levelIndex = 0;
+  let maze = null;
+  let ratX = 0, ratZ = 0, ratFacing = 0;
+  let cheesePos = { x: 0, z: 0 };
+  let goalReached = false;
+  const keys = { up: false, down: false, left: false, right: false };
+
+  function showScreen(name) {
+    screenMenu.classList.toggle('active', name === 'menu');
+    mazeScreen.classList.toggle('active', name === 'maze');
+    hud.classList.toggle('active', name === 'maze');
+    pad.classList.toggle('active', name === 'maze');
+    menuBtn.classList.toggle('active', name === 'maze');
+  }
+
+  function generateMaze(cols, rows) {
+    const cells = [];
+    for (let r = 0; r < rows; r++) {
+      const row = [];
+      for (let c = 0; c < cols; c++) row.push({ visited: false, walls: { N: true, S: true, E: true, W: true } });
+      cells.push(row);
+    }
+    const dirs = [
+      { name: 'N', dr: -1, dc: 0, opp: 'S' },
+      { name: 'S', dr: 1, dc: 0, opp: 'N' },
+      { name: 'E', dr: 0, dc: 1, opp: 'W' },
+      { name: 'W', dr: 0, dc: -1, opp: 'E' }
+    ];
+    const stack = [{ r: 0, c: 0 }];
+    cells[0][0].visited = true;
+    while (stack.length) {
+      const cur = stack[stack.length - 1];
+      const options = [];
+      for (const d of dirs) {
+        const nr = cur.r + d.dr, nc = cur.c + d.dc;
+        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !cells[nr][nc].visited) options.push({ ...d, nr, nc });
+      }
+      if (!options.length) { stack.pop(); continue; }
+      const pick = options[Math.floor(Math.random() * options.length)];
+      cells[cur.r][cur.c].walls[pick.name] = false;
+      cells[pick.nr][pick.nc].walls[pick.opp] = false;
+      cells[pick.nr][pick.nc].visited = true;
+      stack.push({ r: pick.nr, c: pick.nc });
+    }
+    return cells;
+  }
+
+  function buildBarkTexture() {
+    const c = document.createElement('canvas');
+    c.width = 64; c.height = 64;
+    const cx = c.getContext('2d');
+    cx.fillStyle = '#7c4a24';
+    cx.fillRect(0, 0, 64, 64);
+    cx.strokeStyle = '#5c3418';
+    cx.lineWidth = 2;
+    for (let y = 4; y < 64; y += 9) {
+      cx.beginPath();
+      cx.moveTo(0, y);
+      cx.lineTo(64, y + (Math.random() * 4 - 2));
+      cx.stroke();
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    return tex;
+  }
+
+  let renderer, scene, camera, mazeGroup, ratMesh, cheeseMesh;
+  let barkTexture = null;
+
+  function initThree() {
+    const canvas = document.getElementById('mazeCanvas');
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
+    scene.fog = new THREE.Fog(0x87ceeb, 40, 160);
+    camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 500);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    const sun = new THREE.DirectionalLight(0xffffff, 0.8);
+    sun.position.set(30, 50, 20);
+    scene.add(sun);
+
+    barkTexture = buildBarkTexture();
+
+    window.addEventListener('resize', () => {
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+    });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+
+  function buildRat() {
+    const group = new THREE.Group();
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x9ca3af });
+    const earMat = new THREE.MeshStandardMaterial({ color: 0xf3a6b2 });
+    const eyeMat = new THREE.MeshStandardMaterial({ color: 0x111827 });
+
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.9, 12, 12), bodyMat);
+    body.scale.set(1, 0.85, 1.3);
+    body.position.y = 0.9;
+    group.add(body);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 12), bodyMat);
+    head.position.set(0, 1.0, -1.05);
+    group.add(head);
+
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.4, 8), earMat);
+    nose.rotation.x = Math.PI / 2;
+    nose.position.set(0, 0.9, -1.55);
+    group.add(nose);
+
+    [-0.3, 0.3].forEach(x => {
+      const ear = new THREE.Mesh(new THREE.CircleGeometry(0.25, 12), earMat);
+      ear.position.set(x, 1.35, -1.0);
+      group.add(ear);
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), eyeMat);
+      eye.position.set(x * 0.7, 1.05, -1.4);
+      group.add(eye);
+    });
+
+    const tailCurve = new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(0, 0.6, 1.2),
+      new THREE.Vector3(0, 0.9, 2.0),
+      new THREE.Vector3(0.4, 0.5, 2.6)
+    );
+    const tail = new THREE.Mesh(new THREE.TubeGeometry(tailCurve, 12, 0.08, 6), earMat);
+    group.add(tail);
+
+    return group;
+  }
+
+  function buildCheese() {
+    const shape = new THREE.Shape();
+    shape.moveTo(0, 0);
+    shape.lineTo(1.2, 0);
+    shape.lineTo(0, 1.2);
+    shape.lineTo(0, 0);
+    const geo = new THREE.ExtrudeGeometry(shape, { depth: 1.2, bevelEnabled: false });
+    geo.center();
+    const mat = new THREE.MeshStandardMaterial({ color: 0xfacc15 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.y = 0.6;
+
+    const holeMat = new THREE.MeshStandardMaterial({ color: 0xca8a04 });
+    [[-0.2, 0.15], [0.15, -0.1], [0, 0.35]].forEach(([ox, oz]) => {
+      const hole = new THREE.Mesh(new THREE.CircleGeometry(0.13, 10), holeMat);
+      hole.rotation.x = -Math.PI / 2;
+      hole.position.set(ox, 1.21, oz);
+      mesh.add(hole);
+    });
+    return mesh;
+  }
+
+  function clearMazeGroup() {
+    if (mazeGroup) scene.remove(mazeGroup);
+    mazeGroup = new THREE.Group();
+    scene.add(mazeGroup);
+  }
+
+  function buildMazeMeshes(cells, cols, rows) {
+    clearMazeGroup();
+
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(cols * CELL + 10, rows * CELL + 10),
+      new THREE.MeshStandardMaterial({ color: 0x4d9a3a })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set((cols * CELL) / 2, -0.05, (rows * CELL) / 2);
+    mazeGroup.add(floor);
+
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x8a5a2b, map: barkTexture });
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x2f7a34 });
+
+    function addWall(cx, cz, horizontal) {
+      const geo = horizontal
+        ? new THREE.BoxGeometry(CELL, WALL_H, 0.6)
+        : new THREE.BoxGeometry(0.6, WALL_H, CELL);
+      const wall = new THREE.Mesh(geo, wallMat);
+      wall.position.set(cx, WALL_H / 2, cz);
+      mazeGroup.add(wall);
+
+      if (Math.random() < 0.18) {
+        const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 8), leafMat);
+        leaf.position.set(cx + (Math.random() - 0.5) * 1.5, WALL_H + 0.3, cz + (Math.random() - 0.5) * 1.5);
+        leaf.scale.set(1, 0.7, 1);
+        mazeGroup.add(leaf);
+      }
+    }
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const cell = cells[r][c];
+        const cxCenter = (c + 0.5) * CELL, czCenter = (r + 0.5) * CELL;
+        if (cell.walls.N) addWall(cxCenter, r * CELL, true);
+        if (cell.walls.S) addWall(cxCenter, (r + 1) * CELL, true);
+        if (cell.walls.W) addWall(c * CELL, czCenter, false);
+        if (cell.walls.E) addWall((c + 1) * CELL, czCenter, false);
+      }
+    }
+
+    ratMesh = buildRat();
+    mazeGroup.add(ratMesh);
+    cheeseMesh = buildCheese();
+    cheeseMesh.position.set((cols - 0.5) * CELL, 0, (rows - 0.5) * CELL);
+    mazeGroup.add(cheeseMesh);
+  }
+
+  function startLevel(idx) {
+    levelIndex = idx;
+    const conf = DIFFICULTIES[idx];
+    maze = generateMaze(conf.cols, conf.rows);
+    ratX = 0.5 * CELL;
+    ratZ = 0.5 * CELL;
+    ratFacing = 0;
+    goalReached = false;
+    cheesePos = { x: (conf.cols - 0.5) * CELL, z: (conf.rows - 0.5) * CELL };
+    buildMazeMeshes(maze, conf.cols, conf.rows);
+    hudLevel.textContent = conf.name + ' Maze (' + conf.cols + '×' + conf.rows + ')';
+    overlay.classList.remove('open');
+    showScreen('maze');
+  }
+
+  function currentCell() {
+    const conf = DIFFICULTIES[levelIndex];
+    const col = Math.max(0, Math.min(conf.cols - 1, Math.floor(ratX / CELL)));
+    const row = Math.max(0, Math.min(conf.rows - 1, Math.floor(ratZ / CELL)));
+    return { row, col, cell: maze[row][col] };
+  }
+
+  function update(dt) {
+    if (goalReached) return;
+    let dx = 0, dz = 0;
+    if (keys.up) dz -= 1;
+    if (keys.down) dz += 1;
+    if (keys.left) dx -= 1;
+    if (keys.right) dx += 1;
+    if (dx !== 0 && dz !== 0) { dx *= 0.7071; dz *= 0.7071; }
+
+    if (dx !== 0 || dz !== 0) {
+      ratFacing = Math.atan2(dx, dz);
+      let newX = ratX + dx * MOVE_SPEED * dt;
+      let newZ = ratZ + dz * MOVE_SPEED * dt;
+
+      const { row, col, cell } = currentCell();
+      const minX = col * CELL + RAT_RADIUS, maxX = (col + 1) * CELL - RAT_RADIUS;
+      const minZ = row * CELL + RAT_RADIUS, maxZ = (row + 1) * CELL - RAT_RADIUS;
+
+      if (cell.walls.W && newX < minX) newX = minX;
+      if (cell.walls.E && newX > maxX) newX = maxX;
+      if (cell.walls.N && newZ < minZ) newZ = minZ;
+      if (cell.walls.S && newZ > maxZ) newZ = maxZ;
+
+      ratX = newX;
+      ratZ = newZ;
+    }
+
+    ratMesh.position.set(ratX, 0, ratZ);
+    ratMesh.rotation.y = ratFacing;
+
+    const dist = Math.hypot(ratX - cheesePos.x, ratZ - cheesePos.z);
+    if (dist < 1.4) {
+      goalReached = true;
+      setTimeout(onLevelComplete, 200);
+    }
+
+    const conf = DIFFICULTIES[levelIndex];
+    const spanX = conf.cols * CELL, spanZ = conf.rows * CELL;
+    const dist2 = Math.max(spanX, spanZ) * 0.55 + 14;
+    camera.position.set(ratX, dist2 * 0.72, ratZ + dist2);
+    camera.lookAt(ratX, 0, ratZ);
+  }
+
+  function onLevelComplete() {
+    const conf = DIFFICULTIES[levelIndex];
+    overlayTitle.textContent = 'Cheese Found!';
+    overlayText.textContent = 'You solved the ' + conf.name + ' maze.';
+    if (levelIndex >= DIFFICULTIES.length - 1) {
+      overlayTitle.textContent = 'All Mazes Solved!';
+      overlayText.textContent = 'You guided the rat through Easy, Medium, and Hard!';
+      nextBtn.style.display = 'none';
+    } else {
+      nextBtn.style.display = 'inline-block';
+      nextBtn.textContent = 'Next: ' + DIFFICULTIES[levelIndex + 1].name;
+    }
+    overlay.classList.add('open');
+  }
+
+  let lastTime = performance.now();
+  function loop() {
+    const now = performance.now();
+    const dt = Math.min(0.05, (now - lastTime) / 1000);
+    lastTime = now;
+    if (mazeScreen.classList.contains('active')) {
+      update(dt);
+      renderer.render(scene, camera);
+    }
+    requestAnimationFrame(loop);
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(e.code)) e.preventDefault();
+    if (e.code === 'ArrowUp' || e.code === 'KeyW') keys.up = true;
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') keys.down = true;
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+  });
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'ArrowUp' || e.code === 'KeyW') keys.up = false;
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') keys.down = false;
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+  });
+
+  function bindHold(el, onDown, onUp) {
+    el.addEventListener('mousedown', onDown);
+    el.addEventListener('touchstart', (e) => { e.preventDefault(); onDown(); }, { passive: false });
+    el.addEventListener('mouseup', onUp);
+    el.addEventListener('mouseleave', onUp);
+    el.addEventListener('touchend', (e) => { e.preventDefault(); onUp(); }, { passive: false });
+  }
+  bindHold(document.getElementById('padUp'), () => keys.up = true, () => keys.up = false);
+  bindHold(document.getElementById('padDown'), () => keys.down = true, () => keys.down = false);
+  bindHold(document.getElementById('padLeft'), () => keys.left = true, () => keys.left = false);
+  bindHold(document.getElementById('padRight'), () => keys.right = true, () => keys.right = false);
+
+  document.querySelectorAll('.level-card').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!renderer) initThree();
+      startLevel(parseInt(btn.dataset.level, 10));
+    });
+  });
+  menuBtn.addEventListener('click', () => showScreen('menu'));
+  menuBtn2.addEventListener('click', () => { overlay.classList.remove('open'); showScreen('menu'); });
+  retryBtn.addEventListener('click', () => startLevel(levelIndex));
+  nextBtn.addEventListener('click', () => startLevel(levelIndex + 1));
+
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
