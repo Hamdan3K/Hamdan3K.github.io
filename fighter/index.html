@@ -504,14 +504,6 @@
       }
       ctx.restore();
     }
-
-    ctx.strokeStyle = c;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx - 12, GROUND_Y);
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + 12, GROUND_Y);
-    ctx.stroke();
   }
 
   function drawShield(cx, cy) {
