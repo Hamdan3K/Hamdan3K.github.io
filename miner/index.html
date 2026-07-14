@@ -64,6 +64,8 @@
     margin-bottom: 1.25rem;
   }
   canvas {
+    width: min(90vw, 600px);
+    height: auto;
     max-width: 100%;
   }
   .hint {
@@ -211,7 +213,7 @@
     <h1>Rock Miner</h1>
     <div class="status">Points: <strong id="score">0</strong></div>
     <div class="board-wrap">
-      <canvas id="scene" width="260" height="240"></canvas>
+      <canvas id="scene" width="520" height="480"></canvas>
     </div>
     <p class="hint">Press <kbd>Space</kbd> or tap the rock to mine — each hit is worth <strong id="clickValue">1</strong> point.</p>
     <div class="controls">
@@ -530,19 +532,25 @@
     });
   }
 
+  const SCALE = 2;
+  const SCENE_W = 260, SCENE_H = 240;
+
   function drawGround() {
     ctx.fillStyle = '#57534e';
-    ctx.fillRect(0, 210, canvas.width, 30);
+    ctx.fillRect(0, 210, SCENE_W, 30);
     ctx.fillStyle = '#44403c';
-    ctx.fillRect(0, 210, canvas.width, 4);
+    ctx.fillRect(0, 210, SCENE_W, 4);
   }
 
   function frame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.scale(SCALE, SCALE);
     drawGround();
     drawRock();
     drawCat();
     drawPopups();
+    ctx.restore();
 
     if (swing > 0) swing = Math.max(0, swing - 0.06);
     if (rockShake > 0) rockShake = Math.max(0, rockShake - 0.06);
