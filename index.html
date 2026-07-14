@@ -112,6 +112,19 @@
   }
   .app-icon span.mark.x { color: #00732f; }
   .app-icon span.mark.o { color: #c8102e; }
+  .app-icon.c4 {
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    background: #00732f;
+    padding: 8px;
+  }
+  .app-icon.c4 span {
+    border-radius: 50%;
+    opacity: 1;
+    background: var(--tile-bg);
+  }
+  .app-icon.c4 span.red { background: #c8102e; }
+  .app-icon.c4 span.gold { background: #d4af37; }
   .app-label {
     font-size: 0.8rem;
     font-weight: 500;
@@ -136,6 +149,14 @@
         <span></span><span></span><span class="mark x">X</span>
       </div>
       <span class="app-label">Tic-Tac-Toe</span>
+    </a>
+    <a class="app-tile" href="./connect4/">
+      <div class="app-icon c4">
+        <span></span><span class="red"></span><span></span><span></span>
+        <span class="gold"></span><span class="red"></span><span></span><span></span>
+        <span class="gold"></span><span class="gold"></span><span class="red"></span><span></span>
+      </div>
+      <span class="app-label">Connect 4</span>
     </a>
   </div>
 </body>
