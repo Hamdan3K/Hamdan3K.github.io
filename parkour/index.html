@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stickman Parkour — Hamdan</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --accent: #0284c7;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--card);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card {
+    width: 100%;
+    min-height: 100vh;
+    background: var(--card);
+    padding: 2.5rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  h1 {
+    font-weight: 800;
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+    color: var(--accent);
+  }
+  .status {
+    color: var(--muted);
+    font-size: 1rem;
+    margin-bottom: 1.25rem;
+  }
+  .status strong {
+    color: var(--text);
+    font-size: 1.2rem;
+  }
+  canvas {
+    width: min(95vw, 720px);
+    height: auto;
+    border-radius: 12px;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.3);
+    margin-bottom: 1.25rem;
+    touch-action: none;
+  }
+  .hint {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 1.25rem;
+    max-width: 480px;
+  }
+  .hint kbd {
+    background: var(--bg);
+    border: 1px solid var(--muted);
+    border-radius: 5px;
+    padding: 0.1rem 0.5rem;
+    font-family: inherit;
+  }
+  .pad {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .pad-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    border: 1px solid var(--muted);
+    background: transparent;
+    color: var(--text);
+    font-size: 1.4rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .pad-btn:hover, .pad-btn:active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .controls {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  button {
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 10px;
+    padding: 0.55rem 1.1rem;
+    border: 1px solid var(--muted);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .back-btn {
+    position: fixed;
+    top: 1.25rem;
+    left: 1.25rem;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    border: 1px solid var(--muted);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .back-btn:hover {
+    border-color: var(--accent);
+    transform: translateX(-2px);
+  }
+  .home-icon {
+    font-size: 1.3rem;
+    line-height: 1;
+    filter: grayscale(1) brightness(0);
+  }
+</style>
+</head>
+<body>
+  <a class="back-btn" href="/" aria-label="Back to home"><span class="home-icon">&#127968;</span></a>
+  <main class="card">
+    <h1>Stickman Parkour</h1>
+    <div class="status">Distance: <strong id="distance">0</strong>m</div>
+    <canvas id="scene" width="700" height="300"></canvas>
+    <p class="hint">
+      <kbd>&rarr;</kbd> / <kbd>D</kbd> forward &nbsp; <kbd>&larr;</kbd> / <kbd>A</kbd> backward &nbsp;
+      <kbd>&uarr;</kbd> / <kbd>W</kbd> / <kbd>Space</kbd> jump &nbsp; <kbd>&darr;</kbd> / <kbd>S</kbd> crouch.
+      Hold forward + crouch to slide under low bars; jump over the ground hurdles.
+    </p>
+    <div class="pad">
+      <button class="pad-btn" id="btnBack" aria-label="Backward">&larr;</button>
+      <button class="pad-btn" id="btnCrouch" aria-label="Crouch">&darr;</button>
+      <button class="pad-btn" id="btnJump" aria-label="Jump">&uarr;</button>
+      <button class="pad-btn" id="btnForward" aria-label="Forward">&rarr;</button>
+    </div>
+    <div class="controls">
+      <button id="reset">New Game</button>
+    </div>
+  </main>
+
+<script>
+(function () {
+  const canvas = document.getElementById('scene');
+  const ctx = canvas.getContext('2d');
+  const distanceEl = document.getElementById('distance');
+  const resetBtn = document.getElementById('reset');
+
+  const W = canvas.width, H = canvas.height;
+  const GROUND_Y = 230;
+  const GRAVITY = 0.7;
+  const JUMP_SPEED = 13;
+  const RUN_SPEED = 4.2;
+  const BACK_SPEED = 3;
+  const SLIDE_BOOST = 1.35;
+  const PLAYER_X = 150;
+  const STAND_H = 70, CROUCH_H = 36, HALF_W = 14;
+
+  let trackX = 0;
+  let vy = 0;
+  let airborne = 0;
+  let onGround = true;
+  let gameOver = false;
+  let runPhase = 0;
+  let obstacles = [];
+  let nextSpawnX = 420;
+
+  const keys = { forward: false, backward: false, up: false, down: false };
+
+  function resetGame() {
+    trackX = 0;
+    vy = 0;
+    airborne = 0;
+    onGround = true;
+    gameOver = false;
+    runPhase = 0;
+    obstacles = [];
+    nextSpawnX = 420;
+    distanceEl.textContent = '0';
+  }
+
+  function spawnObstacles() {
+    while (nextSpawnX < trackX + 1400) {
+      const type = Math.random() < 0.5 ? 'hurdle' : 'overhead';
+      if (type === 'hurdle') {
+        obstacles.push({ type, trackX: nextSpawnX, halfW: 12, topY: GROUND_Y - 40, bottomY: GROUND_Y });
+      } else {
+        obstacles.push({ type, trackX: nextSpawnX, halfW: 26, topY: GROUND_Y - 175, bottomY: GROUND_Y - 150 });
+      }
+      nextSpawnX += 260 + Math.random() * 160;
+    }
+    obstacles = obstacles.filter(o => o.trackX > trackX - 100);
+  }
+
+  function currentHeight() {
+    if (!onGround) return STAND_H;
+    return keys.down ? CROUCH_H : STAND_H;
+  }
+
+  function isSliding() {
+    return onGround && keys.down && keys.forward;
+  }
+
+  function update() {
+    if (gameOver) return;
+
+    let speed = 0;
+    if (keys.forward) speed = RUN_SPEED * (isSliding() ? SLIDE_BOOST : 1);
+    else if (keys.backward) speed = -BACK_SPEED;
+    trackX = Math.max(0, trackX + speed);
+    if (speed !== 0) runPhase += Math.abs(speed) * 0.05;
+
+    if (keys.up && onGround) {
+      vy = JUMP_SPEED;
+      onGround = false;
+    }
+
+    if (!onGround) {
+      vy -= GRAVITY;
+      airborne += vy;
+      if (airborne <= 0) {
+        airborne = 0;
+        vy = 0;
+        onGround = true;
+      }
+    }
+
+    spawnObstacles();
+
+    const h = currentHeight();
+    const feetY = GROUND_Y - airborne;
+    const headTopY = feetY - h;
+
+    for (const o of obstacles) {
+      const screenX = o.trackX - trackX + PLAYER_X;
+      if (screenX + o.halfW < PLAYER_X - HALF_W || screenX - o.halfW > PLAYER_X + HALF_W) continue;
+      if (feetY > o.topY && headTopY < o.bottomY) {
+        gameOver = true;
+        break;
+      }
+    }
+
+    distanceEl.textContent = Math.floor(trackX / 20);
+  }
+
+  function drawBackground() {
+    const grad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+    grad.addColorStop(0, '#7dd3fc');
+    grad.addColorStop(1, '#bae6fd');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, GROUND_Y);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    for (let i = 0; i < 5; i++) {
+      const cx = ((i * 220 - trackX * 0.2) % (W + 200) + (W + 200)) % (W + 200) - 100;
+      ctx.beginPath();
+      ctx.ellipse(cx, 50 + (i % 3) * 20, 34, 14, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx + 26, 46 + (i % 3) * 20, 24, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = '#86efac';
+    for (let i = 0; i < 8; i++) {
+      const cx = ((i * 180 - trackX * 0.5) % (W + 200) + (W + 200)) % (W + 200) - 100;
+      ctx.beginPath();
+      ctx.arc(cx, GROUND_Y + 10, 60, Math.PI, 0);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = '#78716c';
+    ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+    ctx.fillStyle = '#57534e';
+    ctx.fillRect(0, GROUND_Y, W, 4);
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 30; i++) {
+      const gx = ((i * 40 - trackX) % (W + 80) + (W + 80)) % (W + 80) - 40;
+      ctx.beginPath();
+      ctx.moveTo(gx, GROUND_Y + 10);
+      ctx.lineTo(gx + 16, GROUND_Y + 10);
+      ctx.stroke();
+    }
+  }
+
+  function drawObstacles() {
+    for (const o of obstacles) {
+      const screenX = o.trackX - trackX + PLAYER_X;
+      if (screenX < -60 || screenX > W + 60) continue;
+      if (o.type === 'hurdle') {
+        ctx.fillStyle = '#dc2626';
+        ctx.fillRect(screenX - o.halfW, o.topY, o.halfW * 2, o.bottomY - o.topY);
+        ctx.fillStyle = '#7f1d1d';
+        ctx.fillRect(screenX - o.halfW, o.topY, o.halfW * 2, 6);
+      } else {
+        ctx.fillStyle = '#a16207';
+        ctx.fillRect(screenX - o.halfW, o.topY, o.halfW * 2, o.bottomY - o.topY);
+        ctx.fillStyle = '#78350f';
+        for (let s = -1; s <= 1; s += 2) {
+          ctx.fillRect(screenX + s * (o.halfW - 6), o.bottomY, 6, GROUND_Y - o.bottomY);
+        }
+      }
+    }
+  }
+
+  function drawStickman() {
+    const h = currentHeight();
+    const feetY = GROUND_Y - airborne;
+    const sliding = isSliding();
+    ctx.strokeStyle = '#1f2937';
+    ctx.fillStyle = '#1f2937';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+
+    if (sliding) {
+      const hipY = feetY - 14;
+      ctx.beginPath();
+      ctx.moveTo(PLAYER_X - 26, feetY - 4);
+      ctx.lineTo(PLAYER_X + 18, hipY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(PLAYER_X + 28, hipY - 8, 11, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(PLAYER_X + 10, hipY - 4);
+      ctx.lineTo(PLAYER_X - 20, hipY - 16);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(PLAYER_X - 26, feetY - 4);
+      ctx.lineTo(PLAYER_X - 40, feetY - 4);
+      ctx.stroke();
+      return;
+    }
+
+    const headCY = feetY - h + 10;
+    const hipY = feetY - h * 0.45;
+
+    ctx.beginPath();
+    ctx.arc(PLAYER_X, headCY, 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(PLAYER_X, headCY + 10);
+    ctx.lineTo(PLAYER_X, hipY);
+    ctx.stroke();
+
+    const armSwing = onGround ? Math.sin(runPhase) * 22 : -18;
+    ctx.beginPath();
+    ctx.moveTo(PLAYER_X, headCY + 18);
+    ctx.lineTo(PLAYER_X + armSwing, hipY - 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(PLAYER_X, headCY + 18);
+    ctx.lineTo(PLAYER_X - armSwing, hipY - 2);
+    ctx.stroke();
+
+    if (!onGround) {
+      ctx.beginPath();
+      ctx.moveTo(PLAYER_X, hipY);
+      ctx.lineTo(PLAYER_X - 14, feetY - 6);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(PLAYER_X, hipY);
+      ctx.lineTo(PLAYER_X + 16, feetY);
+      ctx.stroke();
+    } else if (keys.down) {
+      ctx.beginPath();
+      ctx.moveTo(PLAYER_X, hipY);
+      ctx.lineTo(PLAYER_X - 16, feetY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(PLAYER_X, hipY);
+      ctx.lineTo(PLAYER_X + 16, feetY);
+      ctx.stroke();
+    } else {
+      const legSwing = Math.sin(runPhase) * 16;
+      ctx.beginPath();
+      ctx.moveTo(PLAYER_X, hipY);
+      ctx.lineTo(PLAYER_X + legSwing, feetY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(PLAYER_X, hipY);
+      ctx.lineTo(PLAYER_X - legSwing, feetY);
+      ctx.stroke();
+    }
+  }
+
+  function drawGameOver() {
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.6)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.fillText('Game Over', W / 2, H / 2 - 10);
+    ctx.font = '16px sans-serif';
+    ctx.fillText('Distance: ' + Math.floor(trackX / 20) + 'm — press New Game to retry', W / 2, H / 2 + 20);
+  }
+
+  function frame() {
+    update();
+    ctx.clearRect(0, 0, W, H);
+    drawBackground();
+    drawObstacles();
+    drawStickman();
+    if (gameOver) drawGameOver();
+    requestAnimationFrame(frame);
+  }
+
+  function bindHold(el, onDown, onUp) {
+    el.addEventListener('mousedown', onDown);
+    el.addEventListener('touchstart', (e) => { e.preventDefault(); onDown(); }, { passive: false });
+    el.addEventListener('mouseup', onUp);
+    el.addEventListener('mouseleave', onUp);
+    el.addEventListener('touchend', (e) => { e.preventDefault(); onUp(); }, { passive: false });
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'Space', 'KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(e.code)) {
+      e.preventDefault();
+    }
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.forward = true;
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.backward = true;
+    if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.up = true;
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') keys.down = true;
+  });
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.forward = false;
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.backward = false;
+    if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.up = false;
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') keys.down = false;
+  });
+
+  bindHold(document.getElementById('btnForward'), () => keys.forward = true, () => keys.forward = false);
+  bindHold(document.getElementById('btnBack'), () => keys.backward = true, () => keys.backward = false);
+  bindHold(document.getElementById('btnJump'), () => keys.up = true, () => keys.up = false);
+  bindHold(document.getElementById('btnCrouch'), () => keys.down = true, () => keys.down = false);
+
+  resetBtn.addEventListener('click', resetGame);
+  resetGame();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
