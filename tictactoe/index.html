@@ -6,32 +6,29 @@
 <title>Tic-Tac-Toe — Hamdan</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@500;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0f172a;
-    --bg-card: #1e293b;
-    --text: #e2e8f0;
-    --muted: #94a3b8;
-    --accent: #38bdf8;
-    --accent-2: #818cf8;
-    --win: #34d399;
-  }
-  @media (prefers-color-scheme: light) {
-    :root {
-      --bg: #f8fafc;
-      --bg-card: #ffffff;
-      --text: #0f172a;
-      --muted: #475569;
-      --accent: #0284c7;
-      --accent-2: #4f46e5;
-      --win: #059669;
-    }
+    --sand: #f1e3c2;
+    --sand-dark: #e3cf9c;
+    --card: #faf3e0;
+    --text: #3b2c1a;
+    --muted: #8a7048;
+    --gold: #b8860b;
+    --gold-light: #d4af37;
+    --green: #00732f;
+    --red: #c8102e;
+    --black: #14110d;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: var(--bg);
+    font-family: "Cairo", "Segoe UI", sans-serif;
+    background-color: var(--sand);
+    background-image:
+      radial-gradient(circle at 20% 20%, rgba(184,134,11,0.12) 0, transparent 45%),
+      radial-gradient(circle at 80% 80%, rgba(0,115,47,0.10) 0, transparent 45%),
+      repeating-linear-gradient(45deg, rgba(184,134,11,0.06) 0 2px, transparent 2px 26px),
+      repeating-linear-gradient(-45deg, rgba(184,134,11,0.06) 0 2px, transparent 2px 26px);
     color: var(--text);
     min-height: 100vh;
     display: flex;
@@ -42,31 +39,49 @@
   .card {
     max-width: 420px;
     width: 100%;
-    background: var(--bg-card);
-    border-radius: 20px;
-    padding: 2.5rem 2rem;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    background: var(--card);
+    border-radius: 14px;
+    padding: 2.5rem 2rem 2rem;
+    box-shadow: 0 20px 60px rgba(20,17,13,0.25);
     text-align: center;
+    border: 2px solid var(--gold);
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 8px;
+    background: linear-gradient(to right,
+      var(--red) 0 12%,
+      var(--green) 12% 41%, var(--card) 41% 42%,
+      #ffffff 42% 71%, var(--card) 71% 72%,
+      var(--black) 72% 100%);
   }
   a.back {
     display: inline-block;
-    margin-bottom: 1.25rem;
+    margin: 1rem 0 1.25rem;
     color: var(--muted);
     text-decoration: none;
     font-size: 0.9rem;
   }
-  a.back:hover { color: var(--accent); }
+  a.back:hover { color: var(--green); }
   h1 {
-    font-family: "Baloo 2", "Segoe UI", sans-serif;
-    font-weight: 800;
-    font-size: 2.4rem;
-    letter-spacing: 0.02em;
-    margin-bottom: 0.75rem;
-    background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    color: var(--accent);
+    font-family: "Amiri", "Cairo", serif;
+    font-weight: 700;
+    font-size: 2.5rem;
+    letter-spacing: 0.03em;
+    margin-bottom: 0.15rem;
+    color: var(--gold);
+    text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+  }
+  .subtitle {
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1.5rem;
   }
   .difficulty-row {
     margin-bottom: 1.25rem;
@@ -89,30 +104,34 @@
   }
   .cell {
     aspect-ratio: 1 / 1;
-    background: #0d9488;
-    border: 2px solid #facc15;
-    border-radius: 12px;
+    background: var(--sand-dark);
+    border: 2px solid var(--gold);
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-family: "Amiri", serif;
     font-size: 2.5rem;
     font-weight: 700;
     cursor: pointer;
-    color: var(--accent);
+    color: var(--green);
     transition: border-color 0.15s ease, transform 0.1s ease;
     user-select: none;
   }
   .cell:hover:not(.taken):not(.disabled) {
-    border-color: #eab308;
+    border-color: var(--gold-light);
     transform: scale(1.03);
   }
   .cell.taken, .cell.disabled {
     cursor: default;
   }
-  .cell.o { color: var(--accent-2); }
+  .cell.o {
+    color: var(--red);
+  }
   .cell.win {
-    border-color: var(--win);
-    color: var(--win);
+    border-color: var(--black);
+    background: var(--gold-light);
+    color: var(--black);
   }
   .controls {
     display: flex;
@@ -121,20 +140,21 @@
     flex-wrap: wrap;
   }
   button, select {
-    font-family: inherit;
+    font-family: "Cairo", inherit;
     font-size: 0.9rem;
     font-weight: 600;
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 0.55rem 1.1rem;
-    border: 1px solid var(--muted);
-    background: transparent;
+    border: 1.5px solid var(--gold);
+    background: var(--card);
     color: var(--text);
     cursor: pointer;
-    transition: border-color 0.15s ease, color 0.15s ease;
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
   }
   button:hover, select:hover {
-    border-color: var(--accent);
-    color: var(--accent);
+    border-color: var(--green);
+    color: var(--green);
+    background: var(--sand);
   }
   select {
     cursor: pointer;
@@ -150,6 +170,7 @@
   <main class="card">
     <a class="back" href="./">&larr; Back to home</a>
     <h1>Tic-Tac-Toe</h1>
+    <div class="subtitle">Emirati Heritage Edition</div>
     <div class="difficulty-row">
       <select id="difficulty">
         <option value="unbeatable" selected>Unbeatable</option>
