@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rock Miner — Hamdan</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --accent: #0284c7;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+  }
+  .card {
+    max-width: 440px;
+    width: 100%;
+    background: var(--card);
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    text-align: center;
+    position: relative;
+  }
+  h1 {
+    font-weight: 800;
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+    color: var(--accent);
+  }
+  .status {
+    color: var(--muted);
+    font-size: 1rem;
+    margin-bottom: 1.25rem;
+  }
+  .status strong {
+    color: var(--text);
+    font-size: 1.3rem;
+  }
+  .board-wrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+  }
+  canvas {
+    max-width: 100%;
+  }
+  .hint {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+  }
+  .hint kbd {
+    background: var(--bg);
+    border: 1px solid var(--muted);
+    border-radius: 5px;
+    padding: 0.1rem 0.5rem;
+    font-family: inherit;
+  }
+  .controls {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  button {
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 10px;
+    padding: 0.55rem 1.1rem;
+    border: 1px solid var(--muted);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .back-btn {
+    position: fixed;
+    top: 1.25rem;
+    left: 1.25rem;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    border: 1px solid var(--muted);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .back-btn:hover {
+    border-color: var(--accent);
+    transform: translateX(-2px);
+  }
+  .home-icon {
+    font-size: 1.3rem;
+    line-height: 1;
+    filter: grayscale(1) brightness(0);
+  }
+  .shop-btn {
+    position: fixed;
+    top: 1.25rem;
+    right: 1.25rem;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #dc2626;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    cursor: pointer;
+    font-size: 1.3rem;
+    transition: transform 0.15s ease;
+  }
+  .shop-btn:hover {
+    transform: scale(1.08);
+  }
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    z-index: 10;
+  }
+  .overlay.open {
+    display: flex;
+  }
+  .shop-panel {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 1.75rem;
+    max-width: 380px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  }
+  .shop-panel h2 {
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+  }
+  .shop-item {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--bg);
+    text-align: left;
+  }
+  .shop-item:last-of-type {
+    border-bottom: none;
+  }
+  .shop-icon {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+  }
+  .shop-info {
+    flex: 1;
+  }
+  .shop-info .name {
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+  .shop-info .cost {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .shop-panel .close-btn {
+    display: block;
+    margin: 1.25rem auto 0;
+  }
+</style>
+</head>
+<body>
+  <a class="back-btn" href="/" aria-label="Back to home"><span class="home-icon">&#127968;</span></a>
+  <button class="shop-btn" id="shopOpenBtn" aria-label="Open shop">&#128722;</button>
+
+  <main class="card">
+    <h1>Rock Miner</h1>
+    <div class="status">Points: <strong id="score">0</strong></div>
+    <div class="board-wrap">
+      <canvas id="scene" width="260" height="240"></canvas>
+    </div>
+    <p class="hint">Press <kbd>Space</kbd> or tap the rock to mine — each hit is worth <strong id="clickValue">1</strong> point.</p>
+    <div class="controls">
+      <button id="reset">Reset</button>
+    </div>
+  </main>
+
+  <div class="overlay" id="overlay">
+    <div class="shop-panel">
+      <h2>Pickaxe Shop</h2>
+      <div id="shopList"></div>
+      <button class="close-btn" id="shopCloseBtn">Close</button>
+    </div>
+  </div>
+
+<script>
+(function () {
+  const canvas = document.getElementById('scene');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const clickValueEl = document.getElementById('clickValue');
+  const resetBtn = document.getElementById('reset');
+  const shopOpenBtn = document.getElementById('shopOpenBtn');
+  const shopCloseBtn = document.getElementById('shopCloseBtn');
+  const overlay = document.getElementById('overlay');
+  const shopList = document.getElementById('shopList');
+
+  const PICKAXES = [
+    { id: 0, name: 'Iron Pickaxe', cost: 100, bonus: 1, head: '#94a3b8', handle: '#8a5a2b' },
+    { id: 1, name: 'Gold Pickaxe', cost: 200, bonus: 2, head: '#eab308', handle: '#8a5a2b' },
+    { id: 2, name: 'Diamond Pickaxe', cost: 300, bonus: 3, head: '#67e8f9', handle: '#8a5a2b' }
+  ];
+
+  let score = 0;
+  let owned = [false, false, false];
+  let swing = 0;
+  let rockShake = 0;
+  let popups = [];
+  let shopOpen = false;
+
+  function clickValue() {
+    let v = 1;
+    PICKAXES.forEach((p, i) => { if (owned[i]) v += p.bonus; });
+    return v;
+  }
+
+  function currentPickaxe() {
+    for (let i = PICKAXES.length - 1; i >= 0; i--) {
+      if (owned[i]) return PICKAXES[i];
+    }
+    return { head: '#9ca3af', handle: '#8a5a2b' };
+  }
+
+  function renderShop() {
+    shopList.innerHTML = '';
+    PICKAXES.forEach((p, i) => {
+      const row = document.createElement('div');
+      row.className = 'shop-item';
+
+      const iconCanvas = document.createElement('canvas');
+      iconCanvas.width = 44;
+      iconCanvas.height = 44;
+      iconCanvas.className = 'shop-icon';
+      drawPickaxeIcon(iconCanvas.getContext('2d'), p, 44);
+
+      const info = document.createElement('div');
+      info.className = 'shop-info';
+      info.innerHTML = '<div class="name">' + p.name + '</div><div class="cost">' +
+        (owned[i] ? 'Owned' : p.cost + ' points · +' + p.bonus + ' per click') + '</div>';
+
+      const buyBtn = document.createElement('button');
+      buyBtn.textContent = owned[i] ? 'Owned' : 'Buy';
+      buyBtn.disabled = owned[i] || score < p.cost;
+      buyBtn.addEventListener('click', () => {
+        if (owned[i] || score < p.cost) return;
+        score -= p.cost;
+        owned[i] = true;
+        updateScoreUI();
+        renderShop();
+      });
+
+      row.appendChild(iconCanvas);
+      row.appendChild(info);
+      row.appendChild(buyBtn);
+      shopList.appendChild(row);
+    });
+  }
+
+  function drawPickaxeIcon(c, p, size) {
+    c.clearRect(0, 0, size, size);
+    c.save();
+    c.translate(size / 2, size / 2);
+    c.rotate(-Math.PI / 4);
+    c.strokeStyle = p.handle;
+    c.lineWidth = size * 0.09;
+    c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(0, -size * 0.32);
+    c.lineTo(0, size * 0.32);
+    c.stroke();
+    c.fillStyle = p.head;
+    c.beginPath();
+    c.moveTo(-size * 0.34, -size * 0.34);
+    c.quadraticCurveTo(0, -size * 0.5, size * 0.34, -size * 0.34);
+    c.quadraticCurveTo(0, -size * 0.15, -size * 0.34, -size * 0.34);
+    c.fill();
+    c.restore();
+  }
+
+  function updateScoreUI() {
+    scoreEl.textContent = score;
+    clickValueEl.textContent = clickValue();
+  }
+
+  function mine() {
+    if (shopOpen) return;
+    const gained = clickValue();
+    score += gained;
+    swing = 1;
+    rockShake = 1;
+    popups.push({ x: 175, y: 150, text: '+' + gained, life: 1 });
+    updateScoreUI();
+  }
+
+  function reset() {
+    score = 0;
+    owned = [false, false, false];
+    updateScoreUI();
+    renderShop();
+  }
+
+  function openShop() {
+    shopOpen = true;
+    renderShop();
+    overlay.classList.add('open');
+  }
+
+  function closeShop() {
+    shopOpen = false;
+    overlay.classList.remove('open');
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function drawCat() {
+    const cx = 100, cy = 130;
+
+    // tail
+    ctx.strokeStyle = '#4b5563';
+    ctx.lineWidth = 10;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx + 38, cy + 55);
+    ctx.quadraticCurveTo(cx + 70, cy + 60, cx + 60, cy + 20);
+    ctx.stroke();
+
+    // body
+    ctx.fillStyle = '#6b7280';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 55, 42, 34, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // head
+    ctx.beginPath();
+    ctx.arc(cx, cy, 40, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ears
+    ctx.beginPath();
+    ctx.moveTo(cx - 32, cy - 22);
+    ctx.lineTo(cx - 44, cy - 52);
+    ctx.lineTo(cx - 12, cy - 34);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx + 32, cy - 22);
+    ctx.lineTo(cx + 44, cy - 52);
+    ctx.lineTo(cx + 12, cy - 34);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#f3a6b2';
+    ctx.beginPath();
+    ctx.moveTo(cx - 27, cy - 26);
+    ctx.lineTo(cx - 33, cy - 42);
+    ctx.lineTo(cx - 16, cy - 32);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx + 27, cy - 26);
+    ctx.lineTo(cx + 33, cy - 42);
+    ctx.lineTo(cx + 16, cy - 32);
+    ctx.closePath();
+    ctx.fill();
+
+    // hard hat
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    ctx.arc(cx, cy - 14, 30, Math.PI, 0);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cx, cy - 14, 34, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#b45309';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 44);
+    ctx.lineTo(cx, cy - 14);
+    ctx.stroke();
+
+    // whiskers
+    ctx.strokeStyle = '#374151';
+    ctx.lineWidth = 1.5;
+    [-1, 1].forEach(side => {
+      for (let i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(cx + side * 20, cy + 8 + i * 6);
+        ctx.lineTo(cx + side * 46, cy + 4 + i * 8);
+        ctx.stroke();
+      }
+    });
+
+    // eyes
+    ctx.fillStyle = '#1f2937';
+    ctx.beginPath();
+    ctx.ellipse(cx - 14, cy - 2, 5, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cx + 14, cy - 2, 5, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // nose + mouth
+    ctx.fillStyle = '#f3a6b2';
+    ctx.beginPath();
+    ctx.moveTo(cx - 4, cy + 10);
+    ctx.lineTo(cx + 4, cy + 10);
+    ctx.lineTo(cx, cy + 15);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#374151';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + 15);
+    ctx.quadraticCurveTo(cx - 8, cy + 22, cx - 16, cy + 16);
+    ctx.moveTo(cx, cy + 15);
+    ctx.quadraticCurveTo(cx + 8, cy + 22, cx + 16, cy + 16);
+    ctx.stroke();
+
+    // arm + pickaxe
+    const swingAngle = Math.sin(swing * Math.PI) * 0.9;
+    ctx.save();
+    ctx.translate(cx + 36, cy + 40);
+    ctx.rotate(-0.6 - swingAngle);
+    ctx.fillStyle = '#6b7280';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 10, 16, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const p = currentPickaxe();
+    ctx.translate(0, -14);
+    ctx.strokeStyle = p.handle;
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, -46);
+    ctx.stroke();
+    ctx.fillStyle = p.head;
+    ctx.beginPath();
+    ctx.moveTo(-24, -50);
+    ctx.quadraticCurveTo(0, -70, 24, -50);
+    ctx.quadraticCurveTo(0, -38, -24, -50);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawRock() {
+    const shakeX = Math.sin(rockShake * Math.PI * 4) * rockShake * 4;
+    const cx = 190 + shakeX, cy = 165;
+    ctx.fillStyle = '#78716c';
+    ctx.beginPath();
+    ctx.moveTo(cx - 34, cy + 20);
+    ctx.lineTo(cx - 40, cy - 5);
+    ctx.lineTo(cx - 18, cy - 28);
+    ctx.lineTo(cx + 10, cy - 30);
+    ctx.lineTo(cx + 34, cy - 8);
+    ctx.lineTo(cx + 28, cy + 18);
+    ctx.lineTo(cx - 5, cy + 26);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#57534e';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx - 15, cy - 10);
+    ctx.lineTo(cx + 2, cy + 2);
+    ctx.lineTo(cx - 4, cy + 16);
+    ctx.stroke();
+  }
+
+  function drawPopups() {
+    popups.forEach(p => {
+      ctx.globalAlpha = Math.max(p.life, 0);
+      ctx.fillStyle = '#facc15';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.text, p.x, p.y - (1 - p.life) * 40);
+      ctx.globalAlpha = 1;
+    });
+  }
+
+  function drawGround() {
+    ctx.fillStyle = '#57534e';
+    ctx.fillRect(0, 210, canvas.width, 30);
+    ctx.fillStyle = '#44403c';
+    ctx.fillRect(0, 210, canvas.width, 4);
+  }
+
+  function frame() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawGround();
+    drawRock();
+    drawCat();
+    drawPopups();
+
+    if (swing > 0) swing = Math.max(0, swing - 0.06);
+    if (rockShake > 0) rockShake = Math.max(0, rockShake - 0.06);
+    popups.forEach(p => p.life -= 0.025);
+    popups = popups.filter(p => p.life > 0);
+
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+      e.preventDefault();
+      mine();
+    }
+  });
+
+  canvas.addEventListener('click', mine);
+  resetBtn.addEventListener('click', reset);
+  shopOpenBtn.addEventListener('click', openShop);
+  shopCloseBtn.addEventListener('click', closeShop);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeShop(); });
+
+  updateScoreUI();
+  renderShop();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
