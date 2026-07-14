@@ -244,11 +244,12 @@
   const PICKAXES = [
     { id: 0, name: 'Iron Pickaxe', cost: 100, bonus: 1, head: '#94a3b8', handle: '#8a5a2b' },
     { id: 1, name: 'Gold Pickaxe', cost: 200, bonus: 2, head: '#eab308', handle: '#8a5a2b' },
-    { id: 2, name: 'Diamond Pickaxe', cost: 300, bonus: 3, head: '#67e8f9', handle: '#8a5a2b' }
+    { id: 2, name: 'Diamond Pickaxe', cost: 300, bonus: 3, head: '#67e8f9', handle: '#8a5a2b' },
+    { id: 3, name: 'Emerald Pickaxe', cost: 400, bonus: 4, head: '#22c55e', handle: '#8a5a2b' }
   ];
 
   let score = 0;
-  let owned = [false, false, false];
+  let owned = [false, false, false, false];
   let swing = 0;
   let rockShake = 0;
   let popups = [];
@@ -340,7 +341,7 @@
 
   function reset() {
     score = 0;
-    owned = [false, false, false];
+    owned = [false, false, false, false];
     updateScoreUI();
     renderShop();
   }
