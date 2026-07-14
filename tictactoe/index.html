@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tic-Tac-Toe — Hamdan</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --bg-card: #1e293b;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent-2: #818cf8;
+    --win: #34d399;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f8fafc;
+      --bg-card: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --accent: #0284c7;
+      --accent-2: #4f46e5;
+      --win: #059669;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+  }
+  .card {
+    max-width: 420px;
+    width: 100%;
+    background: var(--bg-card);
+    border-radius: 20px;
+    padding: 2.5rem 2rem;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    text-align: center;
+  }
+  a.back {
+    display: inline-block;
+    margin-bottom: 1.25rem;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+  a.back:hover { color: var(--accent); }
+  h1 {
+    font-size: 1.6rem;
+    margin-bottom: 0.4rem;
+  }
+  .status {
+    color: var(--muted);
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+    min-height: 1.4rem;
+  }
+  .board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 0 auto 1.75rem;
+    max-width: 300px;
+  }
+  .cell {
+    aspect-ratio: 1 / 1;
+    background: var(--bg);
+    border: 2px solid var(--muted);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--accent);
+    transition: border-color 0.15s ease, transform 0.1s ease;
+    user-select: none;
+  }
+  .cell:hover:not(.taken):not(.disabled) {
+    border-color: var(--accent);
+    transform: scale(1.03);
+  }
+  .cell.taken, .cell.disabled {
+    cursor: default;
+  }
+  .cell.o { color: var(--accent-2); }
+  .cell.win {
+    border-color: var(--win);
+    color: var(--win);
+  }
+  .controls {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  button, select {
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 10px;
+    padding: 0.55rem 1.1rem;
+    border: 1px solid var(--muted);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  button:hover, select:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  select {
+    cursor: pointer;
+  }
+  footer {
+    margin-top: 2rem;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+</style>
+</head>
+<body>
+  <main class="card">
+    <a class="back" href="./">&larr; Back to home</a>
+    <h1>Tic-Tac-Toe</h1>
+    <div class="status" id="status">Your move — you're X</div>
+    <div class="board" id="board"></div>
+    <div class="controls">
+      <select id="difficulty">
+        <option value="unbeatable" selected>Unbeatable</option>
+        <option value="hard">Hard</option>
+        <option value="easy">Easy</option>
+      </select>
+      <button id="reset">New Game</button>
+    </div>
+    <footer>You: X &nbsp;·&nbsp; Computer: O</footer>
+  </main>
+
+<script>
+(function () {
+  const boardEl = document.getElementById('board');
+  const statusEl = document.getElementById('status');
+  const resetBtn = document.getElementById('reset');
+  const difficultySel = document.getElementById('difficulty');
+
+  const HUMAN = 'X';
+  const AI = 'O';
+  const WIN_LINES = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+
+  let board = Array(9).fill(null);
+  let gameOver = false;
+  let cells = [];
+
+  function render() {
+    boardEl.innerHTML = '';
+    cells = board.map((val, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'cell' + (val ? ' taken' : '') + (val === 'O' ? ' o' : '');
+      cell.textContent = val || '';
+      cell.addEventListener('click', () => onCellClick(i));
+      boardEl.appendChild(cell);
+      return cell;
+    });
+  }
+
+  function winner(b) {
+    for (const line of WIN_LINES) {
+      const [a, b1, c] = line;
+      if (b[a] && b[a] === b[b1] && b[a] === b[c]) {
+        return { player: b[a], line };
+      }
+    }
+    if (b.every(v => v)) return { player: 'draw', line: [] };
+    return null;
+  }
+
+  function onCellClick(i) {
+    if (gameOver || board[i]) return;
+    board[i] = HUMAN;
+    render();
+    const result = winner(board);
+    if (result) return finish(result);
+    statusEl.textContent = "Computer's move...";
+    setTimeout(computerMove, 300);
+  }
+
+  function computerMove() {
+    if (gameOver) return;
+    const difficulty = difficultySel.value;
+    let move;
+    if (difficulty === 'easy') {
+      move = randomMove(board);
+    } else if (difficulty === 'hard') {
+      move = Math.random() < 0.7 ? bestMove(board) : randomMove(board);
+    } else {
+      move = bestMove(board);
+    }
+    if (move === undefined || move === null) return;
+    board[move] = AI;
+    render();
+    const result = winner(board);
+    if (result) return finish(result);
+    statusEl.textContent = "Your move — you're X";
+  }
+
+  function randomMove(b) {
+    const empty = b.map((v, i) => (v ? null : i)).filter(v => v !== null);
+    return empty[Math.floor(Math.random() * empty.length)];
+  }
+
+  function bestMove(b) {
+    let best = { score: -Infinity, move: null };
+    for (let i = 0; i < 9; i++) {
+      if (b[i]) continue;
+      b[i] = AI;
+      const score = minimax(b, false, 0);
+      b[i] = null;
+      if (score > best.score) best = { score, move: i };
+    }
+    return best.move;
+  }
+
+  function minimax(b, isMaximizing, depth) {
+    const result = winner(b);
+    if (result) {
+      if (result.player === AI) return 10 - depth;
+      if (result.player === HUMAN) return depth - 10;
+      return 0;
+    }
+    if (isMaximizing) {
+      let best = -Infinity;
+      for (let i = 0; i < 9; i++) {
+        if (b[i]) continue;
+        b[i] = AI;
+        best = Math.max(best, minimax(b, false, depth + 1));
+        b[i] = null;
+      }
+      return best;
+    } else {
+      let best = Infinity;
+      for (let i = 0; i < 9; i++) {
+        if (b[i]) continue;
+        b[i] = HUMAN;
+        best = Math.min(best, minimax(b, true, depth + 1));
+        b[i] = null;
+      }
+      return best;
+    }
+  }
+
+  function finish(result) {
+    gameOver = true;
+    if (result.player === 'draw') {
+      statusEl.textContent = "It's a draw!";
+    } else {
+      result.line.forEach(i => cells[i].classList.add('win'));
+      statusEl.textContent = result.player === HUMAN ? 'You win! 🎉' : 'Computer wins!';
+    }
+    cells.forEach(c => c.classList.add('disabled'));
+  }
+
+  function newGame() {
+    board = Array(9).fill(null);
+    gameOver = false;
+    statusEl.textContent = "Your move — you're X";
+    render();
+  }
+
+  resetBtn.addEventListener('click', newGame);
+  newGame();
+})();
+</script>
+</body>
+</html>
