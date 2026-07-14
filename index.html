@@ -3,24 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hamdan — Software Developer</title>
+<title>Hamdan — Start</title>
 <style>
   :root {
-    --bg: #0f172a;
-    --bg-card: #1e293b;
-    --text: #e2e8f0;
-    --muted: #94a3b8;
-    --accent: #38bdf8;
-    --accent-2: #818cf8;
+    --bg: #dfe6ee;
+    --bar-bg: #ffffff;
+    --text: #1f2937;
+    --muted: #64748b;
+    --tile-bg: #ffffff;
+    --shadow: rgba(30, 41, 59, 0.15);
   }
-  @media (prefers-color-scheme: light) {
+  @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #f8fafc;
-      --bg-card: #ffffff;
-      --text: #0f172a;
-      --muted: #475569;
-      --accent: #0284c7;
-      --accent-2: #4f46e5;
+      --bg: #202b3c;
+      --bar-bg: #2b384d;
+      --text: #e5e9f0;
+      --muted: #93a1b7;
+      --tile-bg: #2b384d;
+      --shadow: rgba(0, 0, 0, 0.4);
     }
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -30,101 +30,113 @@
     color: var(--text);
     min-height: 100vh;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 2rem 1rem;
+    padding: 10vh 1rem 2rem;
   }
-  .card {
-    max-width: 640px;
-    width: 100%;
-    background: var(--bg-card);
-    border-radius: 20px;
-    padding: 3rem 2.5rem;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-  }
-  .avatar {
-    width: 88px;
-    height: 88px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  .search-bar {
     display: flex;
     align-items: center;
-    justify-content: center;
-    font-size: 2.25rem;
-    font-weight: 700;
-    color: #fff;
-    margin-bottom: 1.5rem;
-  }
-  h1 {
-    font-size: 2rem;
-    margin-bottom: 0.25rem;
-  }
-  .tagline {
-    color: var(--muted);
-    font-size: 1.05rem;
-    margin-bottom: 1.75rem;
-  }
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    background: rgba(56, 189, 248, 0.12);
-    color: var(--accent);
-    border: 1px solid rgba(56, 189, 248, 0.35);
-    padding: 0.4rem 0.9rem;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 560px;
+    background: var(--bar-bg);
     border-radius: 999px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin-bottom: 2rem;
+    padding: 0.9rem 1.4rem;
+    box-shadow: 0 8px 24px var(--shadow);
   }
-  p.about {
-    line-height: 1.7;
+  .search-bar svg {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    color: var(--muted);
+  }
+  .search-bar input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 1rem;
     color: var(--text);
-    margin-bottom: 2rem;
+    font-family: inherit;
   }
-  .links {
+  .search-bar input::placeholder {
+    color: var(--muted);
+  }
+  .apps-grid {
+    margin-top: 4rem;
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem;
+    gap: 1.75rem;
+    justify-content: center;
   }
-  .links a {
+  .app-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    width: 96px;
     text-decoration: none;
     color: var(--text);
-    background: transparent;
-    border: 1px solid var(--muted);
-    padding: 0.55rem 1.1rem;
-    border-radius: 10px;
-    font-size: 0.95rem;
-    font-weight: 500;
-    transition: border-color 0.15s ease, color 0.15s ease;
   }
-  .links a:hover {
-    border-color: var(--accent);
-    color: var(--accent);
+  .app-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 18px;
+    background: var(--tile-bg);
+    box-shadow: 0 6px 18px var(--shadow);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 4px;
+    padding: 12px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
-  footer {
-    margin-top: 2.5rem;
-    color: var(--muted);
+  .app-tile:hover .app-icon {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 10px 24px var(--shadow);
+  }
+  .app-icon span {
+    border-radius: 3px;
+    background: var(--muted);
+    opacity: 0.35;
+  }
+  .app-icon span.mark {
+    opacity: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
     font-size: 0.8rem;
+    background: transparent;
+  }
+  .app-icon span.mark.x { color: #00732f; }
+  .app-icon span.mark.o { color: #c8102e; }
+  .app-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-align: center;
   }
 </style>
 </head>
 <body>
-  <main class="card">
-    <div class="avatar">H</div>
-    <h1>Hi, I'm Hamdan</h1>
-    <p class="tagline">Building things, one line of code at a time.</p>
-    <div class="badge">💻 Software Development</div>
-    <p class="about">
-      I'm passionate about software development — designing, building, and
-      shipping software that solves real problems. This page is my little
-      corner on the web, hosted with GitHub Pages.
-    </p>
-    <div class="links">
-      <a href="https://github.com/Hamdan3K" target="_blank" rel="noopener">GitHub</a>
-      <a href="./tictactoe/">Play Tic-Tac-Toe</a>
-    </div>
-    <footer>Built with GitHub Pages</footer>
-  </main>
+  <form class="search-bar" action="https://www.google.com/search" method="GET" target="_blank">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="7"></circle>
+      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+    </svg>
+    <input type="text" name="q" placeholder="Search the web" autocomplete="off">
+  </form>
+
+  <div class="apps-grid">
+    <a class="app-tile" href="./tictactoe/">
+      <div class="app-icon">
+        <span></span><span class="mark x">X</span><span></span>
+        <span class="mark o">O</span><span></span><span></span>
+        <span></span><span></span><span class="mark x">X</span>
+      </div>
+      <span class="app-label">Tic-Tac-Toe</span>
+    </a>
+  </div>
 </body>
 </html>
